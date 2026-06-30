@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Tradehub — My Sales</title>
+<link rel="stylesheet" href="css/style.css"/>
+<style>
+  .sa-header {
+    padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  }
+  .sa-header h1 { font-size: 16.5px; font-weight: 800; color: var(--text); }
+
+  .sa-body { flex: 1; padding: 14px 16px 20px; overflow-y: auto; }
+
+  .sa-card { background: var(--surface); border-radius: var(--r-lg); padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(20,30,50,.05); }
+  .sa-top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .sa-id { font-size: 12px; font-weight: 700; color: var(--text); }
+  .sa-date { font-size: 10.5px; color: var(--text-faint); margin-top: 2px; }
+  .sa-status { font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: var(--r-pill); background: #FFF3E0; color: #C17A00; text-transform: capitalize; }
+
+  .sa-buyer-box { background: var(--field-bg); border-radius: var(--r-md); padding: 11px 13px; margin-bottom: 10px; }
+  .sa-buyer-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); font-weight: 600; margin-bottom: 5px; }
+  .sa-buyer-row:last-child { margin-bottom: 0; }
+  .sa-buyer-row svg { flex-shrink: 0; }
+  .sa-buyer-row a { color: var(--blue); font-weight: 700; }
+
+  .sa-item-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 12px; color: var(--text-dim); }
+  .sa-item-row strong { color: var(--text); font-weight: 700; }
+
+  .sa-divider { height: 1px; background: var(--border); margin: 10px 0; }
+  .sa-total-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: var(--text); }
+  .sa-total-row span:last-child { color: var(--accent-end); }
+
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; text-align: center; }
+  .empty-state svg { width: 56px; height: 56px; color: var(--border); margin-bottom: 16px; }
+  .empty-state p { color: var(--text-dim); font-size: 14px; line-height: 1.6; }
+
+  .spinner-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app safe-top safe-bottom">
+
+  <div class="sa-header">
+    <button onclick="window.location.href='profile.html'" style="display:flex;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16213A" stroke-width="2.5"><path d="M19 12H5M5 12l7-7M5 12l7 7"/></svg>
+    </button>
+    <h1>My Sales</h1>
+  </div>
+
+  <div id="loading" class="spinner-wrap"><div class="spinner"></div></div>
+  <div id="sa-body" class="sa-body hidden"></div>
+  <div id="empty-state" class="empty-state hidden">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    <p>No sales yet.<br/>You'll see buyer orders here when someone purchases your items.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { getSession, getCurrentUser } from "./js/auth.js";
+import { getOrdersForSeller } from "./js/products.js";
+
+function toastMsg(msg, dur = 2200) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+function formatNaira(n) { return "₦" + Number(n).toLocaleString("en-NG"); }
+function escHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+function formatDate(ts) {
+  if (!ts) return "";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+}
+
+async function init() {
+  if (!getSession()) { window.location.href = "auth.html"; return; }
+  const user = await getCurrentUser();
+  if (!user) { window.location.href = "auth.html"; return; }
+  if (user.role === "buyer") {
+    toastMsg("This page is for sellers. Switch your role in Edit Profile to access it.");
+    setTimeout(() => window.location.href = "profile.html", 1800);
+    return;
+  }
+
+  try {
+    const orders = await getOrdersForSeller(user.id);
+    document.getElementById("loading").classList.add("hidden");
+
+    if (!orders.length) {
+      document.getElementById("empty-state").classList.remove("hidden");
+      document.getElementById("empty-state").style.display = "flex";
+      return;
+    }
+
+    const body = document.getElementById("sa-body");
+    body.classList.remove("hidden");
+    body.innerHTML = orders.map(order => {
+      // Only show this seller's items within the order, not the buyer's whole cart
+      const myItems = (order.items || []).filter(i => i.sellerId === user.id);
+      const myTotal = myItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+      return `
+        <div class="sa-card">
+          <div class="sa-top-row">
+            <div>
+              <div class="sa-id">Order #${order.id.slice(0, 8).toUpperCase()}</div>
+              <div class="sa-date">${formatDate(order.createdAt)}</div>
+            </div>
+            <div class="sa-status">${order.status || 'pending'}</div>
+          </div>
+
+          <div class="sa-buyer-box">
+            <div class="sa-buyer-row">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5A6B80" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              ${escHtml(order.buyerName)}
+            </div>
+            <div class="sa-buyer-row">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5A6B80" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+              <a href="tel:${order.buyerPhone}">${escHtml(order.buyerPhone)}</a>
+            </div>
+            <div class="sa-buyer-row">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5A6B80" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              ${escHtml(order.deliveryAddress)}
+            </div>
+          </div>
+
+          ${myItems.map(item => `
+            <div class="sa-item-row"><strong>${escHtml(item.name)}</strong>&nbsp;×${item.qty}</div>
+          `).join("")}
+
+          <div class="sa-divider"></div>
+          <div class="sa-total-row"><span>You'll receive (COD)</span><span>${formatNaira(myTotal)}</span></div>
+        </div>
+      `;
+    }).join("");
+  } catch (e) {
+    document.getElementById("loading").classList.add("hidden");
+    console.error(e);
+    const empty = document.getElementById("empty-state");
+    empty.classList.remove("hidden");
+    empty.style.display = "flex";
+    empty.querySelector("p").innerHTML = `Couldn't load your sales.<br/><span style="font-size:11px;color:var(--text-faint);word-break:break-word;">${escHtml(e.message)}</span>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
