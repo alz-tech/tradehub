@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Tradehub — My Orders</title>
+<link rel="stylesheet" href="/css/style.css"/>
+<style>
+  .or-header {
+    padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  }
+  .or-header h1 { font-size: 16.5px; font-weight: 800; color: var(--text); }
+
+  .or-body { flex: 1; padding: 14px 16px 20px; overflow-y: auto; }
+
+  .or-card { background: var(--surface); border-radius: var(--r-lg); padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(20,30,50,.05); }
+  .or-top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .or-id { font-size: 12px; font-weight: 700; color: var(--text); }
+  .or-date { font-size: 10.5px; color: var(--text-faint); margin-top: 2px; }
+  .or-status {
+    font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: var(--r-pill);
+    text-transform: capitalize;
+  }
+  .or-status.pending { background: #FFF3E0; color: #C17A00; }
+  .or-status.confirmed { background: #E0F0FF; color: var(--blue); }
+  .or-status.delivered { background: var(--success-bg); color: var(--success); }
+  .or-status.cancelled { background: #FFE5EC; color: var(--danger); }
+
+  .or-item-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .or-item-thumb { width: 38px; height: 38px; border-radius: 8px; background: linear-gradient(160deg,#dde6f0,#c5d4e6); flex-shrink: 0; overflow: hidden; }
+  .or-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .or-item-name { flex: 1; font-size: 12px; color: var(--text); font-weight: 600; }
+  .or-item-qty { font-size: 11px; color: var(--text-faint); }
+
+  .or-divider { height: 1px; background: var(--border); margin: 10px 0; }
+  .or-total-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: var(--text); }
+  .or-total-row span:last-child { color: var(--accent-end); }
+
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; text-align: center; }
+  .empty-state svg { width: 56px; height: 56px; color: var(--border); margin-bottom: 16px; }
+  .empty-state p { color: var(--text-dim); font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
+  .empty-state .cta-btn { background: var(--blue); color: #fff; font-weight: 700; font-size: 13.5px; padding: 12px 26px; border-radius: var(--r-pill); }
+
+  .spinner-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .or-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .or-receive-btn {
+    flex: 1; background: var(--success); color: #fff; font-weight: 700; font-size: 12.5px;
+    padding: 11px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .or-receive-btn:disabled { opacity: .6; }
+  .or-review-btn {
+    flex: 1; background: var(--field-bg); color: var(--text); font-weight: 700; font-size: 12.5px;
+    padding: 11px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .or-received-note { font-size: 11.5px; color: var(--success); font-weight: 700; margin-top: 10px; display: flex; align-items: center; gap: 6px; }
+
+  /* ── Rate & review modal ── */
+  .rv-overlay {
+    position: fixed; inset: 0; background: rgba(16,24,40,.45);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 200; opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .rv-overlay.show { opacity: 1; pointer-events: auto; }
+  .rv-sheet {
+    background: var(--surface); width: 100%; max-width: 480px;
+    border-radius: 18px 18px 0 0; padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+    transform: translateY(16px); transition: transform .2s;
+  }
+  .rv-overlay.show .rv-sheet { transform: translateY(0); }
+  .rv-title { font-size: 15.5px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .rv-product-name { font-size: 12.5px; color: var(--text-dim); margin-bottom: 16px; }
+  .rv-stars { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+  .rv-star { width: 36px; height: 36px; cursor: pointer; }
+  .rv-star svg { width: 100%; height: 100%; }
+  .rv-remark-label { font-size: 12px; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; display: block; }
+  .rv-remark-box { background: var(--field-bg); border-radius: var(--r-md); padding: 12px 14px; margin-bottom: 16px; }
+  .rv-remark-box textarea {
+    border: none; outline: none; background: transparent; resize: none; min-height: 70px;
+    font-size: 13.5px; color: var(--text); width: 100%; font-family: 'Outfit', sans-serif;
+  }
+  .rv-submit-btn { background: var(--accent-grad); color: #fff; font-weight: 800; font-size: 14px; padding: 14px; border-radius: var(--r-md); text-align: center; }
+  .rv-submit-btn:disabled { opacity: .6; }
+  .rv-cancel-btn { text-align: center; color: var(--text-dim); font-weight: 700; font-size: 13px; padding: 12px; }
+</style>
+</head>
+<body>
+<div class="app safe-top safe-bottom">
+
+  <div class="or-header">
+    <button onclick="window.location.href='/profile'" style="display:flex;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16213A" stroke-width="2.5"><path d="M19 12H5M5 12l7-7M5 12l7 7"/></svg>
+    </button>
+    <h1>My Orders</h1>
+  </div>
+
+  <div id="loading" class="spinner-wrap"><div class="spinner"></div></div>
+  <div id="or-body" class="or-body hidden"></div>
+  <div id="empty-state" class="empty-state hidden">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14l-8 4m0 10l-8-4V7m8 14V11M4 7l8 4"/></svg>
+    <p>No orders yet.<br/>Your purchases will show up here.</p>
+    <button class="cta-btn" onclick="window.location.href='/'">Start Shopping</button>
+  </div>
+</div>
+
+<!-- Rate & review modal — shown after tapping "Rate this item" on a delivered order -->
+<div class="rv-overlay" id="rv-overlay" onclick="if(event.target===this) closeReviewModal()">
+  <div class="rv-sheet">
+    <div class="rv-title">Rate your purchase</div>
+    <div class="rv-product-name" id="rv-product-name"></div>
+    <div class="rv-stars" id="rv-stars"></div>
+    <label class="rv-remark-label">Your remark <span style="color:var(--text-faint);font-weight:500;">(optional)</span></label>
+    <div class="rv-remark-box"><textarea id="rv-remark" maxlength="500" placeholder="How was the product and the seller's service?"></textarea></div>
+    <button class="rv-submit-btn" id="rv-submit-btn" onclick="submitReview()">Submit Review</button>
+    <button class="rv-cancel-btn" onclick="closeReviewModal()">Cancel</button>
+  </div>
+</div>
+
+<%- include("../partials/admin-switcher") %>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { getCurrentUser } from "/js/auth.js";
+import { getMyOrders, markOrderReceived, addReview, getMyReviewForOrder } from "/js/products.js";
+
+function toastMsg(msg, dur = 2200) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+function formatNaira(n) { return "₦" + Number(n).toLocaleString("en-NG"); }
+function escHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+let currentUser = null;
+let orderCache = {};
+
+function formatDate(ts) {
+  if (!ts) return "";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+}
+
+async function init() {
+  currentUser = await getCurrentUser();
+  if (!currentUser) { window.location.href = "/auth"; return; }
+
+  try {
+    const orders = await getMyOrders(currentUser.id);
+    orderCache = {};
+    orders.forEach(o => { orderCache[o.id] = o; });
+    document.getElementById("loading").classList.add("hidden");
+
+    if (!orders.length) {
+      document.getElementById("empty-state").classList.remove("hidden");
+      document.getElementById("empty-state").style.display = "flex";
+      return;
+    }
+
+    renderOrders(orders);
+  } catch (e) {
+    document.getElementById("loading").classList.add("hidden");
+    console.error(e);
+    const empty = document.getElementById("empty-state");
+    empty.classList.remove("hidden");
+    empty.style.display = "flex";
+    empty.querySelector("p").innerHTML = `Couldn't load your orders.<br/><span style="font-size:11px;color:var(--text-faint);word-break:break-word;">${escHtml(e.message)}</span>`;
+  }
+}
+
+function renderOrders(orders) {
+  const body = document.getElementById("or-body");
+  body.classList.remove("hidden");
+  body.innerHTML = orders.map(order => {
+    const status = order.status || "pending";
+    const isDelivered = status === "delivered";
+
+    let actionsHtml = "";
+    if (!isDelivered && status !== "cancelled") {
+      actionsHtml = `
+        <div class="or-actions">
+          <button class="or-receive-btn" onclick="handleMarkReceived('${order.id}', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            I've Received This
+          </button>
+        </div>
+      `;
+    } else if (isDelivered) {
+      // One "Rate this item" entry per item in the order (items can come
+      // from different sellers/products within the same order)
+      const itemButtons = (order.items || []).map((item, idx) => `
+        <button class="or-review-btn" style="margin-bottom:6px;" onclick='openReviewModal(${JSON.stringify(order.id)}, ${JSON.stringify(item.productId)}, ${JSON.stringify(escHtml(item.name))})'>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#FFB23E" stroke="#FFB23E" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+          Rate ${escHtml(item.name)}
+        </button>
+      `).join("");
+      actionsHtml = `
+        <div class="or-received-note">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Marked as received
+        </div>
+        <div class="or-actions" style="flex-direction:column;margin-top:8px;">${itemButtons}</div>
+      `;
+    }
+
+    return `
+      <div class="or-card">
+        <div class="or-top-row">
+          <div>
+            <div class="or-id">Order #${String(order.id).padStart(6, "0")}</div>
+            <div class="or-date">${formatDate(order.createdAt)}</div>
+          </div>
+          <div class="or-status ${status}">${status}</div>
+        </div>
+        ${(order.items || []).map(item => `
+          <div class="or-item-row">
+            <div class="or-item-thumb"></div>
+            <div class="or-item-name">${escHtml(item.name)}</div>
+            <div class="or-item-qty">×${item.qty}</div>
+          </div>
+        `).join("")}
+        <div class="or-divider"></div>
+        <div class="or-total-row"><span>Total (COD)</span><span>${formatNaira(order.total)}</span></div>
+        ${actionsHtml}
+      </div>
+    `;
+  }).join("");
+}
+
+window.handleMarkReceived = async function (orderId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Updating…"; }
+  try {
+    await markOrderReceived(orderId);
+    const order = orderCache[orderId];
+    if (order) order.status = "delivered";
+    toastMsg("Marked as received. Thanks for confirming!");
+    renderOrders(Object.values(orderCache).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)));
+  } catch (e) {
+    toastMsg("Couldn't update order: " + e.message);
+    if (btn) { btn.disabled = false; btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> I've Received This`; }
+  }
+};
+
+// ── Rate & review modal ────────────────────────────────
+let reviewCtx = { orderId: null, productId: null, stars: 0 };
+
+function renderStars() {
+  const wrap = document.getElementById("rv-stars");
+  wrap.innerHTML = "";
+  for (let i = 1; i <= 5; i++) {
+    const filled = i <= reviewCtx.stars;
+    const star = document.createElement("div");
+    star.className = "rv-star";
+    star.innerHTML = `<svg viewBox="0 0 24 24" fill="${filled ? '#FFB23E' : 'none'}" stroke="#FFB23E" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>`;
+    star.onclick = () => { reviewCtx.stars = i; renderStars(); };
+    wrap.appendChild(star);
+  }
+}
+
+window.openReviewModal = async function (orderId, productId, productName) {
+  if (!productId) { toastMsg("This item can't be rated (missing product reference)."); return; }
+  try {
+    const existing = await getMyReviewForOrder(orderId, productId, currentUser.id);
+    if (existing) { toastMsg("You've already rated this item. Thanks!"); return; }
+  } catch (e) {
+    console.warn("Couldn't check existing review:", e.message);
+  }
+  reviewCtx = { orderId, productId, stars: 0 };
+  document.getElementById("rv-product-name").textContent = productName || "";
+  document.getElementById("rv-remark").value = "";
+  renderStars();
+  document.getElementById("rv-overlay").classList.add("show");
+};
+
+window.closeReviewModal = function () {
+  document.getElementById("rv-overlay").classList.remove("show");
+};
+
+window.submitReview = async function () {
+  if (!reviewCtx.stars) { toastMsg("Please select a star rating."); return; }
+  const btn = document.getElementById("rv-submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Submitting…";
+  try {
+    await addReview({
+      orderId: reviewCtx.orderId,
+      productId: reviewCtx.productId,
+      buyerId: currentUser.id,
+      buyerName: currentUser.name || "Anonymous",
+      stars: reviewCtx.stars,
+      remark: document.getElementById("rv-remark").value.trim()
+    });
+    toastMsg("Thanks for your review!");
+    closeReviewModal();
+  } catch (e) {
+    toastMsg("Couldn't submit review: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Submit Review";
+  }
+};
+
+init();
+</script>
+</body>
+</html>

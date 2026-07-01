@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Tradehub — Profile</title>
+<link rel="stylesheet" href="/css/style.css"/>
+<style>
+  .pr-header {
+    background: var(--blue);
+    padding: 18px 16px 36px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .pr-header .back-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,.18);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .pr-header h1 { color: #fff; font-size: 17px; font-weight: 800; }
+
+  .pr-card {
+    background: var(--surface); border-radius: var(--r-lg);
+    margin: -24px 16px 0; padding: 18px;
+    box-shadow: 0 4px 16px rgba(20,30,50,.08);
+    display: flex; align-items: center; gap: 14px;
+    position: relative; z-index: 2;
+  }
+  .pr-avatar {
+    width: 58px; height: 58px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 21px; flex-shrink: 0;
+  }
+  .pr-name { font-size: 16.5px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+  .pr-email { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+  .pr-role-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--field-bg); color: var(--blue);
+    font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 100px;
+  }
+
+  .pr-stats { display: flex; padding: 16px; gap: 10px; }
+  .pr-stat-card {
+    flex: 1; background: var(--surface); border-radius: var(--r-md);
+    padding: 14px 10px; text-align: center; box-shadow: 0 1px 4px rgba(20,30,50,.05);
+  }
+  .pr-stat-num { font-size: 18px; font-weight: 800; color: var(--text); }
+  .pr-stat-label { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; }
+
+  .pr-section { padding: 6px 16px; }
+  .pr-section-title { font-size: 12px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: .5px; padding: 14px 4px 8px; }
+
+  .pr-menu { background: var(--surface); border-radius: var(--r-lg); overflow: hidden; box-shadow: 0 1px 4px rgba(20,30,50,.05); }
+  .pr-menu-item {
+    display: flex; align-items: center; gap: 13px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .pr-menu-item:last-child { border-bottom: none; }
+  .pr-menu-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .pr-menu-label { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--text); }
+  .pr-menu-meta { font-size: 11.5px; color: var(--text-faint); }
+  .pr-menu-chevron { color: var(--text-faint); flex-shrink: 0; }
+
+  .pr-logout {
+    margin: 24px 16px 8px; padding: 14px;
+    text-align: center; color: var(--danger); font-weight: 700; font-size: 14px;
+    background: var(--surface); border-radius: var(--r-md);
+    box-shadow: 0 1px 4px rgba(20,30,50,.05);
+  }
+
+  .pr-version { text-align: center; font-size: 11px; color: var(--text-faint); padding: 16px; }
+
+  .loading-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app safe-top safe-bottom">
+
+  <div id="loading-state" class="loading-wrap"><div class="spinner"></div></div>
+
+  <div id="profile-content" class="hidden" style="display:flex;flex-direction:column;flex:1;">
+    <div class="pr-header">
+      <button class="back-btn" onclick="window.location.href='/'">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M19 12H5M5 12l7-7M5 12l7 7"/></svg>
+      </button>
+      <h1>My Account</h1>
+    </div>
+
+    <div class="pr-card">
+      <div class="pr-avatar" id="pr-avatar"></div>
+      <div>
+        <div class="pr-name" id="pr-name"></div>
+        <div class="pr-email" id="pr-email"></div>
+        <div class="pr-role-badge" id="pr-role-badge"></div>
+      </div>
+    </div>
+
+    <div class="pr-stats">
+      <div class="pr-stat-card">
+        <div class="pr-stat-num" id="stat-orders">0</div>
+        <div class="pr-stat-label">Orders</div>
+      </div>
+      <div class="pr-stat-card">
+        <div class="pr-stat-num" id="stat-listings">0</div>
+        <div class="pr-stat-label">Listings</div>
+      </div>
+      <div class="pr-stat-card">
+        <div class="pr-stat-num" id="stat-rating">—</div>
+        <div class="pr-stat-label">Rating</div>
+      </div>
+    </div>
+
+    <div class="pr-section">
+      <div class="pr-section-title">Shopping</div>
+      <div class="pr-menu">
+        <div class="pr-menu-item" onclick="window.location.href='/orders'">
+          <div class="pr-menu-icon" style="background:#E0F0FF;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3DA9FC" stroke-width="2"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14l-8 4m0 10l-8-4V7m8 14V11M4 7l8 4"/></svg>
+          </div>
+          <div class="pr-menu-label">My Orders</div>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="pr-menu-item" onclick="window.location.href='/wishlist'">
+          <div class="pr-menu-icon" style="background:#FFE5EC;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF5C8A" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          </div>
+          <div class="pr-menu-label">Wishlist</div>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="pr-menu-item" onclick="window.location.href='/cart'">
+          <div class="pr-menu-icon" style="background:#E8F7EF;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1FAE6E" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          </div>
+          <div class="pr-menu-label">My Cart</div>
+          <span class="pr-menu-meta" id="cart-meta"></span>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="pr-section" id="selling-section">
+      <div class="pr-section-title">Selling</div>
+      <div class="pr-menu">
+        <div class="pr-menu-item" onclick="window.location.href='/my-listings'">
+          <div class="pr-menu-icon" style="background:#FFF3E0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFA53E" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          </div>
+          <div class="pr-menu-label">My Listings</div>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="pr-menu-item" onclick="window.location.href='/sell'">
+          <div class="pr-menu-icon" style="background:#F3E8FF;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          </div>
+          <div class="pr-menu-label">List a New Item</div>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="pr-menu-item" onclick="window.location.href='/sales'">
+          <div class="pr-menu-icon" style="background:#E8F7EF;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1FAE6E" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <div class="pr-menu-label">My Sales</div>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="pr-menu-item" onclick="window.location.href='/notifications'">
+          <div class="pr-menu-icon" style="background:#E0F0FF;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3DA9FC" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+          </div>
+          <div class="pr-menu-label">Notifications</div>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="pr-section">
+      <div class="pr-section-title">Settings</div>
+      <div class="pr-menu">
+        <div class="pr-menu-item" onclick="window.location.href='/profile/edit'">
+          <div class="pr-menu-icon" style="background:#EFF4FA;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5A6B80" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div class="pr-menu-label">Edit Profile</div>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="pr-menu-item" onclick="window.location.href='/profile/edit'">
+          <div class="pr-menu-icon" style="background:#EFF4FA;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5A6B80" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="pr-menu-label">Phone & Contact Info</div>
+          <svg class="pr-menu-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="pr-logout" onclick="handleLogout()">Log Out</div>
+    <div class="pr-version">Tradehub · made by Nicky Tech</div>
+  </div>
+</div>
+
+<%- include("../partials/admin-switcher") %>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { getCurrentUser, logout } from "/js/auth.js";
+import { getCartCount } from "/js/cart.js";
+import { getMyOrders, getMyProducts } from "/js/products.js";
+
+function toastMsg(msg, dur = 2200) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+window.toast = toastMsg;
+
+window.handleLogout = async function () {
+  if (!confirm("Log out of Tradehub?")) return;
+  await logout();
+  window.location.href = "/auth";
+};
+
+const ROLE_LABELS = {
+  buyer:  "Buyer",
+  seller: "Seller",
+  both:   "Buyer & Seller"
+};
+
+async function init() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      window.location.href = "/auth";
+      return;
+    }
+
+    document.getElementById("loading-state").classList.add("hidden");
+    document.getElementById("profile-content").classList.remove("hidden");
+
+    const avatarEl = document.getElementById("pr-avatar");
+    avatarEl.style.background = user.avatarColor || "#3DA9FC";
+    avatarEl.textContent = user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+    document.getElementById("pr-name").textContent  = user.name;
+    document.getElementById("pr-email").textContent = "@" + user.id;
+    document.getElementById("pr-role-badge").textContent = ROLE_LABELS[user.role] || "Buyer";
+
+    document.getElementById("stat-rating").textContent = user.rating ? user.rating.toFixed(1) : "—";
+
+    // Real counts, not placeholder fields
+    try {
+      const [orders, listings] = await Promise.all([
+        getMyOrders(user.id),
+        getMyProducts(user.id)
+      ]);
+      document.getElementById("stat-orders").textContent = orders.length;
+      document.getElementById("stat-listings").textContent = listings.length;
+    } catch (e) {
+      console.warn("Couldn't load stats:", e.message);
+    }
+
+    const cartCount = getCartCount();
+    document.getElementById("cart-meta").textContent = cartCount > 0 ? `${cartCount} item${cartCount !== 1 ? "s" : ""}` : "Empty";
+
+    // Hide selling section if user is buyer-only
+    if (user.role === "buyer") {
+      document.getElementById("selling-section").style.display = "none";
+    }
+  } catch (e) {
+    console.error(e);
+    // Show error directly on screen so Firestore errors (like missing
+    // index links) are readable rather than disappearing after 2 seconds.
+    document.getElementById("loading-state")?.classList?.add("hidden");
+    document.getElementById("profile-content")?.classList?.add("hidden");
+    const errDiv = document.createElement("div");
+    errDiv.style.cssText = "flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;";
+    errDiv.innerHTML = `
+      <p style="color:var(--text-dim);font-size:14px;margin-bottom:10px;">Couldn't load your profile.</p>
+      <p style="color:var(--text-faint);font-size:11.5px;word-break:break-word;line-height:1.6;">${e.message}</p>
+      <button onclick="location.reload()" style="margin-top:18px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;padding:10px 24px;border-radius:var(--r-pill);border:none;cursor:pointer;">Retry</button>
+    `;
+    document.querySelector(".app").appendChild(errDiv);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

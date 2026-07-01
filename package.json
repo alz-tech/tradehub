@@ -1,0 +1,26 @@
+{
+  "name": "tradehub",
+  "version": "1.0.0",
+  "description": "Tradehub marketplace — Express + EJS + PostgreSQL rewrite (formerly Firebase/Firestore).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node db/migrate.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-pg-simple": "^9.0.1",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^2.7.0",
+    "pg": "^8.12.0"
+  },
+  "private": true
+}

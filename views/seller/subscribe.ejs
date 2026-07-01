@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Tradehub — Seller Subscription</title>
+<link rel="stylesheet" href="/css/style.css"/>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<style>
+  .sb-header {
+    padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  }
+  .sb-header h1 { font-size: 16.5px; font-weight: 800; color: var(--text); }
+  .sb-body { flex: 1; padding: 24px 18px 28px; overflow-y: auto; }
+
+  .sb-card {
+    background: var(--surface); border-radius: var(--r-lg); padding: 24px 20px;
+    box-shadow: 0 1px 4px rgba(20,30,50,.05); text-align: center; margin-bottom: 16px;
+  }
+  .sb-price-row { display: flex; align-items: baseline; justify-content: center; gap: 4px; margin: 6px 0 4px; }
+  .sb-price { font-size: 34px; font-weight: 800; color: var(--text); }
+  .sb-period { font-size: 13px; color: var(--text-faint); font-weight: 600; }
+  .sb-tagline { font-size: 12.5px; color: var(--text-dim); margin-bottom: 18px; }
+
+  .sb-status-pill {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700;
+    padding: 5px 12px; border-radius: var(--r-pill); margin-bottom: 18px;
+  }
+  .sb-status-pill.trial { background: var(--accent-bg-soft); color: var(--accent-end); }
+  .sb-status-pill.active { background: var(--success-bg); color: var(--success); }
+  .sb-status-pill.expired { background: #FFE5EC; color: var(--danger); }
+
+  .sb-feature-list { text-align: left; margin: 0 0 20px; }
+  .sb-feature { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text); padding: 7px 0; }
+  .sb-feature svg { flex-shrink: 0; margin-top: 1px; color: var(--success); }
+
+  .sb-pay-btn {
+    width: 100%; background: var(--accent-grad); color: #fff; font-weight: 800; font-size: 14.5px;
+    padding: 15px; border-radius: var(--r-md); text-align: center;
+  }
+  .sb-pay-btn:disabled { opacity: .6; }
+  .sb-note { font-size: 11px; color: var(--text-faint); margin-top: 12px; line-height: 1.6; }
+
+  .spinner-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app safe-top safe-bottom">
+
+  <div class="sb-header">
+    <button onclick="window.location.href='/profile'" style="display:flex;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16213A" stroke-width="2.5"><path d="M19 12H5M5 12l7-7M5 12l7 7"/></svg>
+    </button>
+    <h1>Seller Subscription</h1>
+  </div>
+
+  <div id="loading" class="spinner-wrap"><div class="spinner"></div></div>
+
+  <div id="sb-body" class="sb-body hidden">
+    <div class="sb-card">
+      <div id="sb-status-pill" class="sb-status-pill hidden"></div>
+      <div class="sb-price-row"><span class="sb-price">₦1,500</span><span class="sb-period">/ month</span></div>
+      <div class="sb-tagline">Full access to list and sell on Tradehub</div>
+
+      <div class="sb-feature-list">
+        <div class="sb-feature">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Unlimited product listings
+        </div>
+        <div class="sb-feature">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Appear in buyer search & category feeds
+        </div>
+        <div class="sb-feature">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Order notifications & buyer remarks
+        </div>
+        <div class="sb-feature">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Star ratings & reviews on your products
+        </div>
+      </div>
+
+      <button class="sb-pay-btn" id="sb-pay-btn" onclick="startPayment()">Pay ₦1,500 with Paystack</button>
+      <div class="sb-note" id="sb-note">You'll be charged monthly. Cancel anytime — access continues until the end of your current paid period.</div>
+    </div>
+  </div>
+
+</div>
+<%- include("../partials/admin-switcher") %>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { getCurrentUser } from "/js/auth.js";
+import {
+  getSubscription, getAccessState, loadConstants,
+  MONTHLY_PRICE_KOBO, PAYSTACK_PUBLIC_KEY, verifyPayment
+} from "/js/subscriptions.js";
+
+// Paystack's PUBLIC key and the subscription price are loaded from the
+// server at startup (see GET /api/subscriptions/constants), which reads
+// them from your .env — nothing payment-related is hardcoded in this
+// file. (These are live ES module bindings: once loadConstants() below
+// resolves, every reference to them here automatically reflects the
+// real values — no need to re-import or reassign anything locally.)
+// The Paystack SECRET key never leaves the server; see routes/api/payments.js.
+
+let currentUser = null;
+
+function toastMsg(msg, dur = 2600) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+function formatDate(ms) {
+  if (!ms) return "";
+  return new Date(ms).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+}
+
+async function init() {
+  currentUser = await getCurrentUser();
+  if (!currentUser) { window.location.href = "/auth"; return; }
+
+  await loadConstants();
+  await refreshStatus();
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("sb-body").classList.remove("hidden");
+}
+
+async function refreshStatus() {
+  const sub = await getSubscription();
+  const state = getAccessState(sub);
+  const pill = document.getElementById("sb-status-pill");
+  const note = document.getElementById("sb-note");
+  const payBtn = document.getElementById("sb-pay-btn");
+
+  pill.classList.remove("hidden", "trial", "active", "expired");
+
+  if (state === "trial") {
+    pill.classList.add("trial");
+    pill.textContent = `Free trial active — ends ${formatDate(sub.trialEnd)}`;
+    note.textContent = "You're currently on a free trial. Subscribing now starts your first paid month right away (it doesn't stack with the trial).";
+    payBtn.textContent = "Subscribe Now — ₦1,500";
+  } else if (state === "active") {
+    pill.classList.add("active");
+    pill.textContent = `Active — renews ${formatDate(sub.currentPeriodEnd)}`;
+    note.textContent = "Your subscription is active. Paying again now extends your access by another 30 days from your current renewal date.";
+    payBtn.textContent = "Extend Another Month — ₦1,500";
+  } else {
+    pill.classList.add("expired");
+    pill.textContent = state === "expired" ? "Subscription expired" : "No active subscription";
+    note.textContent = "You'll be charged monthly. Cancel anytime — access continues until the end of your current paid period.";
+    payBtn.textContent = "Pay ₦1,500 with Paystack";
+  }
+}
+
+window.startPayment = function () {
+  if (!PAYSTACK_PUBLIC_KEY) {
+    toastMsg("Paystack isn't configured yet — set PAYSTACK_PUBLIC_KEY in your environment variables.");
+    return;
+  }
+
+  const btn = document.getElementById("sb-pay-btn");
+  btn.disabled = true;
+  btn.textContent = "Opening Paystack…";
+
+  const handler = PaystackPop.setup({
+    key: PAYSTACK_PUBLIC_KEY,
+    email: `${currentUser.id}@tradehub.local`, // Paystack requires an email; usernames have no email in this app
+    amount: MONTHLY_PRICE_KOBO,
+    currency: "NGN",
+    metadata: {
+      username: currentUser.id,
+      purpose: "tradehub_seller_subscription"
+    },
+    callback: function (response) {
+      // IMPORTANT: this fires as soon as Paystack's popup reports
+      // success — it is NOT proof the payment is real (a tampered
+      // frontend could fake this callback). We still must verify
+      // server-side before granting access. That's what this call does.
+      verifyAndActivate(response.reference);
+    },
+    onClose: function () {
+      btn.disabled = false;
+      btn.textContent = "Pay ₦1,500 with Paystack";
+    }
+  });
+  handler.openIframe();
+};
+
+async function verifyAndActivate(reference) {
+  const btn = document.getElementById("sb-pay-btn");
+  btn.textContent = "Verifying payment…";
+  try {
+    // Posts to /api/payments/verify — the server looks up who's logged
+    // in from the session (not from anything the client sends), calls
+    // Paystack's own verify endpoint with the secret key, and only then
+    // activates the subscription. See routes/api/payments.js.
+    await verifyPayment(reference);
+    toastMsg("Payment verified! Your subscription is now active.");
+    await refreshStatus();
+  } catch (e) {
+    toastMsg("Payment received but verification failed: " + e.message + ". Contact support with your reference: " + reference);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

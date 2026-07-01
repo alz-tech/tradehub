@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Tradehub</title>
+<link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<div class="app safe-top">
+
+  <!-- ── Header ── -->
+  <div class="th-header">
+    <div class="top-row">
+      <div class="th-logo">
+        <div class="badge">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" fill="#3DA9FC"/>
+            <path d="M3 6h18" stroke="#fff" stroke-width="1.5"/>
+            <path d="M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+        <div class="word">Tradehub</div>
+      </div>
+      <div class="icons">
+        <button aria-label="Notifications" onclick="window.location.href='/notifications'" style="position:relative;">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+          <span id="header-notif-badge" class="hidden" style="position:absolute;top:-4px;right:-6px;background:#FF5C8A;color:#fff;font-size:9px;font-weight:800;width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;"></span>
+        </button>
+        <button aria-label="Cart" onclick="window.location.href='/cart'" style="position:relative;">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          <span id="header-cart-badge" class="hidden" style="position:absolute;top:-4px;right:-6px;background:#FF5C8A;color:#fff;font-size:9px;font-weight:800;width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;"></span>
+        </button>
+      </div>
+    </div>
+    <div class="search-pill">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA5B5" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="search-input" placeholder="Search Tradehub" />
+      <button id="search-clear" class="hidden" aria-label="Clear search" style="display:flex;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9AA5B5" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Categories ── -->
+  <div class="cat-row" id="cat-row">
+    <div class="cat-chip active" data-category="">
+      <div class="cat-circle" style="background:#E8EDF3;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5A6B80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </div>
+      <div class="clabel">All</div>
+    </div>
+    <!-- category chips injected here -->
+  </div>
+
+  <!-- ── Promo banner ── -->
+  <div class="promo-banner">
+    <div class="pt1">
+      Sell anything, today
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" style="vertical-align:-2px;"><path d="M12 2c1 3-1 4-1 6 0 1.5 1 2 2 2 1.5 0 2-1.5 1.5-3C16 8 18 11 18 14a6 6 0 01-12 0c0-4 3-5 4-8 .5-1.5 1-3 2-4z"/></svg>
+    </div>
+    <div class="pt2">List your first item in under 2 minutes</div>
+  </div>
+
+  <!-- ── Product feed ── -->
+  <div class="section-title">
+    <span id="feed-title">Just for you</span>
+  </div>
+  <div class="prod-grid" id="prod-grid">
+    <!-- skeleton / real cards injected here -->
+  </div>
+
+  <!-- ── Bottom nav ── -->
+  <nav class="bottom-nav">
+    <button class="nav-item active">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" onclick="document.getElementById('search-input').focus();document.getElementById('cat-row').scrollIntoView({behavior:'smooth'})">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <span class="nav-label">Browse</span>
+    </button>
+    <button class="nav-item sell-item" id="sell-fab" onclick="window.location.href='/sell'">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="nav-item" onclick="window.location.href='/cart'" style="position:relative;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+      <span id="nav-cart-badge" class="hidden" style="position:absolute;top:-2px;right:8px;background:#FF5C8A;color:#fff;font-size:9px;font-weight:800;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;"></span>
+      <span class="nav-label">Cart</span>
+    </button>
+    <button class="nav-item" onclick="window.location.href='/profile'">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="nav-label">Account</span>
+    </button>
+  </nav>
+</div>
+
+<%- include("../partials/admin-switcher") %>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { CATEGORIES, getProducts, searchProducts } from "/js/products.js";
+import { getCurrentUser } from "/js/auth.js";
+import { getCartCount } from "/js/cart.js";
+import { getUnreadNotificationCount } from "/js/notifications.js";
+
+// ── Auth guard: redirect to auth if not logged in ──────
+// Browsing is allowed without login, but we still check so
+// we can show the user's name if they're logged in, and so we can
+// show/hide seller-only controls (the "+" list-an-item button) based
+// on their role.
+let currentUser = null;
+const sellFab = document.getElementById("sell-fab");
+
+getCurrentUser().then(u => {
+  currentUser = u;
+  if (u) {
+    const greet = document.createElement("div");
+    greet.style.cssText = "font-size:11px;color:rgba(255,255,255,.8);font-weight:600;margin-top:2px;";
+    greet.textContent = `Hi, ${u.name.split(" ")[0]}`;
+    document.querySelector(".th-logo").after(greet);
+
+    // Only sellers (role: "seller" or "both") see the sell FAB.
+    // Buyer-only accounts shouldn't have seller actions surfaced.
+    if (u.role === "buyer") {
+      sellFab.style.display = "none";
+    }
+
+    getUnreadNotificationCount(u.id).then(count => {
+      const badge = document.getElementById("header-notif-badge");
+      if (count > 0) {
+        badge.textContent = count > 9 ? "9+" : count;
+        badge.classList.remove("hidden");
+      }
+    }).catch(() => {});
+  } else {
+    // Not logged in at all — no role known yet, so don't show a seller
+    // action; the /sell page itself prompts sign-in if they get there anyway.
+    sellFab.style.display = "none";
+  }
+}).catch(() => {});
+
+window.__th = { getProducts };
+
+function toastMsg(msg, dur = 2200) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+window.toast = toastMsg;
+
+// ── Render category chips ──────────────────────────────
+function renderCategories() {
+  const row = document.getElementById("cat-row");
+  CATEGORIES.forEach(cat => {
+    const chip = document.createElement("div");
+    chip.className = "cat-chip";
+    chip.dataset.category = cat.id;
+    chip.innerHTML = `
+      <div class="cat-circle" style="background:${cat.bg};">${cat.icon}</div>
+      <div class="clabel">${cat.label}</div>
+    `;
+    chip.addEventListener("click", () => selectCategory(cat.id, cat.label));
+    row.appendChild(chip);
+  });
+  row.querySelector('[data-category=""]').addEventListener("click", () => selectCategory("", "All"));
+}
+
+let activeCategory = "";
+
+function selectCategory(catId, label) {
+  activeCategory = catId;
+  document.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
+  document.querySelector(`.cat-chip[data-category="${catId}"]`).classList.add("active");
+  searchInput.value = "";
+  searchClear.style.display = "none";
+  document.getElementById("feed-title").textContent = catId ? label : "Just for you";
+  loadProducts();
+}
+
+// ── Skeleton loaders ──────────────────────────────────
+function renderSkeletons(count = 6) {
+  const grid = document.getElementById("prod-grid");
+  grid.innerHTML = Array.from({ length: count }).map(() => `
+    <div class="skel-card">
+      <div class="skel-img"></div>
+      <div class="skel-line"></div>
+      <div class="skel-line short"></div>
+    </div>
+  `).join("");
+}
+
+// ── Render real product cards ──────────────────────────
+function formatNaira(n) {
+  return "₦" + Number(n).toLocaleString("en-NG");
+}
+
+function renderProducts(products, emptyMessage) {
+  const grid = document.getElementById("prod-grid");
+  if (!products.length) {
+    grid.innerHTML = "";
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.style.gridColumn = "1 / -1";
+    empty.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+      <p>${emptyMessage || "No listings here yet.<br/>Be the first to sell!"}</p>
+    `;
+    grid.appendChild(empty);
+    return;
+  }
+
+  grid.innerHTML = products.map(p => `
+    <div class="prod-card" onclick="window.location.href='/product/${p.id}'">
+      <div class="prod-img">
+        ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${escHtml(p.name)}"/>` : ""}
+        ${p.oldPrice ? `<div class="prod-badge">-${Math.round((1 - p.price / p.oldPrice) * 100)}%</div>` : ""}
+      </div>
+      <div class="prod-info">
+        <div class="prod-name">${escHtml(p.name)}</div>
+        <div class="prod-price-row">
+          <span class="prod-price">${formatNaira(p.price)}</span>
+          ${p.oldPrice ? `<span class="prod-price-old">${formatNaira(p.oldPrice)}</span>` : ""}
+        </div>
+        <div class="prod-rating">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#FFB23E" style="vertical-align:-1px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+          ${p.rating?.toFixed(1) || "New"} · ${p.sold || 0} sold
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ── Load products from Firestore (respects active category) ──
+async function loadProducts() {
+  renderSkeletons();
+  try {
+    const products = await getProducts({ category: activeCategory || null });
+    const catLabel = activeCategory ? CATEGORIES.find(c => c.id === activeCategory)?.label : null;
+    renderProducts(products, catLabel
+      ? `No listings in ${catLabel} yet.<br/>Be the first to sell here!`
+      : "No listings yet.<br/>Be the first to sell on Tradehub!");
+  } catch (e) {
+    console.error(e);
+    const grid = document.getElementById("prod-grid");
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <p>Couldn't load listings.<br/><span style="color:var(--text-faint);font-size:12px;">${escHtml(e.message)}</span></p>
+      </div>
+    `;
+  }
+}
+
+// ── Search — PLATFORM-WIDE, ignores active category by design ──
+// Per product requirement: a user can search for any item without
+// needing to pick a category first, regardless of which category tab
+// happens to be selected.
+let searchDebounce = null;
+
+const searchInput = document.getElementById("search-input");
+const searchClear  = document.getElementById("search-clear");
+
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchDebounce);
+  searchClear.style.display = searchInput.value ? "flex" : "none";
+  searchDebounce = setTimeout(runSearch, 300);
+});
+
+searchClear.addEventListener("click", () => {
+  searchInput.value = "";
+  searchClear.style.display = "none";
+  loadProducts();
+});
+
+async function runSearch() {
+  const term = searchInput.value.trim();
+  if (!term) { loadProducts(); return; }
+
+  renderSkeletons();
+  try {
+    const results = await searchProducts(term);
+    document.getElementById("feed-title").textContent = `Results for "${term}"`;
+    renderProducts(results, `No results for "${escHtml(term)}".<br/>Try a different search.`);
+  } catch (err) {
+    toastMsg("Search failed: " + err.message);
+  }
+}
+
+// ── Cart badge (uses shared js/cart.js module) ──
+function updateCartBadges() {
+  const count = getCartCount();
+  [document.getElementById("header-cart-badge"), document.getElementById("nav-cart-badge")].forEach(badge => {
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = count > 9 ? "9+" : count;
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  });
+}
+updateCartBadges();
+
+// ── Init ────────────────────────────────────────────────
+renderCategories();
+loadProducts();
+</script>
+</body>
+</html>

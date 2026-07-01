@@ -1,0 +1,39 @@
+<%# ════════════════════════════════════════════════════
+    TRADEHUB — Admin view-switcher
+    ════════════════════════════════════════════════════
+    Renders nothing for regular users. For admins, shows a small
+    floating pill (doesn't touch any existing page layout/design) that
+    lets them jump between the Buyer, Seller, and Admin views without
+    logging into a separate account. The chosen mode is stored
+    server-side on the session (see POST /api/auth/view-mode) so
+    role-gated pages and API routes honor it consistently. %>
+<% if (typeof isAdmin !== "undefined" && isAdmin) { %>
+<div id="th-admin-switcher" style="position:fixed;bottom:calc(78px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:998;display:flex;background:#16213A;border-radius:100px;padding:4px;box-shadow:0 4px 16px rgba(10,14,39,.28);gap:2px;">
+  <button data-mode="buyer" class="th-switch-btn" onclick="window.__thSwitchView('buyer','/')" style="border:none;background:none;color:#9AA5B5;font-size:11px;font-weight:700;padding:7px 12px;border-radius:100px;cursor:pointer;">Buyer</button>
+  <button data-mode="seller" class="th-switch-btn" onclick="window.__thSwitchView('seller','/my-listings')" style="border:none;background:none;color:#9AA5B5;font-size:11px;font-weight:700;padding:7px 12px;border-radius:100px;cursor:pointer;">Seller</button>
+  <button data-mode="admin" class="th-switch-btn" onclick="window.__thSwitchView('admin','/admin')" style="border:none;background:none;color:#9AA5B5;font-size:11px;font-weight:700;padding:7px 12px;border-radius:100px;cursor:pointer;">Admin</button>
+</div>
+<script>
+  (function () {
+    var current = <%- JSON.stringify(viewMode || "admin") %>;
+    document.querySelectorAll("#th-admin-switcher .th-switch-btn").forEach(function (btn) {
+      if (btn.dataset.mode === current) {
+        btn.style.background = "#fff";
+        btn.style.color = "#16213A";
+      }
+    });
+  })();
+  window.__thSwitchView = async function (mode, redirectTo) {
+    try {
+      await fetch("/api/auth/view-mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ mode: mode })
+      });
+    } finally {
+      window.location.href = redirectTo;
+    }
+  };
+</script>
+<% } %>

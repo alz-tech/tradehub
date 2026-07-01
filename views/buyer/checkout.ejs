@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Tradehub — Checkout</title>
+<link rel="stylesheet" href="/css/style.css"/>
+<style>
+  .co-header {
+    padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  }
+  .co-header h1 { font-size: 16.5px; font-weight: 800; color: var(--text); }
+
+  .co-body { flex: 1; padding: 16px; overflow-y: auto; }
+
+  .co-section { background: var(--surface); border-radius: var(--r-lg); padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(20,30,50,.05); }
+  .co-section-title { font-size: 13.5px; font-weight: 800; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+  .sell-field { margin-bottom: 14px; }
+  .sell-field:last-child { margin-bottom: 0; }
+  .sell-label { font-size: 12px; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; display: block; }
+  .sell-input-box {
+    background: var(--field-bg); border: 1.5px solid transparent;
+    border-radius: var(--r-md); padding: 12px 14px; transition: border-color .15s;
+  }
+  .sell-input-box:focus-within { border-color: var(--blue); background: var(--surface); }
+  .sell-input-box input, .sell-input-box textarea {
+    border: none; outline: none; background: transparent;
+    font-size: 13.5px; color: var(--text); width: 100%; font-family: 'Outfit', sans-serif;
+  }
+  .sell-input-box textarea { resize: none; min-height: 60px; }
+  .field-error { font-size: 11.5px; color: var(--danger); margin-top: 5px; display: none; }
+  .field-error.show { display: block; }
+
+  .pay-option {
+    display: flex; align-items: center; gap: 12px;
+    border: 1.5px solid var(--blue); background: #EBF5FF;
+    border-radius: var(--r-md); padding: 14px;
+  }
+  .pay-option .pay-icon {
+    width: 38px; height: 38px; border-radius: 10px; background: var(--success-bg);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .pay-option .pay-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .pay-option .pay-desc { font-size: 11px; color: var(--text-dim); }
+  .pay-radio { margin-left: auto; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pay-radio::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--blue); }
+
+  .co-item-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .co-item-row:last-of-type { border-bottom: none; }
+  .co-item-thumb { width: 42px; height: 42px; border-radius: 8px; background: linear-gradient(160deg,#dde6f0,#c5d4e6); flex-shrink: 0; overflow: hidden; }
+  .co-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .co-item-name { flex: 1; font-size: 12px; color: var(--text); font-weight: 600; }
+  .co-item-qty { font-size: 11px; color: var(--text-faint); }
+  .co-item-price { font-size: 12.5px; font-weight: 700; color: var(--text); }
+
+  .summary-row { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-dim); margin-bottom: 9px; }
+  .summary-row.total { font-size: 16px; font-weight: 800; color: var(--text); border-top: 1px solid var(--border); padding-top: 12px; margin-top: 6px; margin-bottom: 0; }
+  .summary-row.total span:last-child { color: var(--accent-end); }
+
+  .co-footer { padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+  .place-order-btn {
+    background: var(--accent-grad); border-radius: var(--r-md); padding: 16px;
+    text-align: center; color: #fff; font-weight: 800; font-size: 14.5px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .place-order-btn:disabled { opacity: .55; }
+  .spinner { width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Order success state ── */
+  .success-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 28px; text-align: center; }
+  .success-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--success-bg); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+  .success-icon svg { width: 38px; height: 38px; color: var(--success); }
+  .success-wrap h2 { font-size: 21px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  .success-wrap p { color: var(--text-dim); font-size: 13.5px; line-height: 1.6; margin-bottom: 26px; }
+  .success-wrap .order-id { font-size: 12px; color: var(--text-faint); background: var(--field-bg); padding: 8px 16px; border-radius: var(--r-pill); margin-bottom: 26px; }
+  .success-btns { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .success-btn-primary { background: var(--blue); color: #fff; font-weight: 700; font-size: 14px; padding: 14px; border-radius: var(--r-md); }
+  .success-btn-secondary { background: var(--field-bg); color: var(--text); font-weight: 700; font-size: 14px; padding: 14px; border-radius: var(--r-md); }
+</style>
+</head>
+<body>
+<div class="app safe-top safe-bottom">
+
+  <div id="checkout-view" style="display:flex;flex-direction:column;flex:1;">
+    <div class="co-header">
+      <button onclick="window.location.href='/cart'" style="display:flex;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16213A" stroke-width="2.5"><path d="M19 12H5M5 12l7-7M5 12l7 7"/></svg>
+      </button>
+      <h1>Checkout</h1>
+    </div>
+
+    <div class="co-body">
+      <div class="co-section">
+        <div class="co-section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DA9FC" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Delivery Details
+        </div>
+        <div class="sell-field">
+          <label class="sell-label">Full name</label>
+          <div class="sell-input-box"><input type="text" id="f-name" placeholder="Your full name"/></div>
+          <div class="field-error" id="err-name"></div>
+        </div>
+        <div class="sell-field">
+          <label class="sell-label">Phone number</label>
+          <div class="sell-input-box"><input type="tel" id="f-phone" placeholder="0810 000 0000" inputmode="tel"/></div>
+          <div class="field-error" id="err-phone"></div>
+        </div>
+        <div class="sell-field">
+          <label class="sell-label">Delivery address</label>
+          <div class="sell-input-box"><textarea id="f-address" placeholder="Street address, city, state"></textarea></div>
+          <div class="field-error" id="err-address"></div>
+        </div>
+        <div class="sell-field">
+          <label class="sell-label">Remark <span style="color:var(--text-faint);font-weight:500;">(optional)</span></label>
+          <div class="sell-input-box"><textarea id="f-remark" placeholder="Any note for the seller — e.g. preferred delivery time, color/size preference, gate code…" maxlength="300"></textarea></div>
+        </div>
+      </div>
+
+      <div class="co-section">
+        <div class="co-section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1FAE6E" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Payment Method
+        </div>
+        <div class="pay-option">
+          <div class="pay-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1FAE6E" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>
+          </div>
+          <div>
+            <div class="pay-title">Cash on Delivery</div>
+            <div class="pay-desc">Pay when your order arrives</div>
+          </div>
+          <div class="pay-radio"></div>
+        </div>
+      </div>
+
+      <div class="co-section">
+        <div class="co-section-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF5C8A" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          Order Summary
+        </div>
+        <div id="co-items"></div>
+        <div style="margin-top:14px;">
+          <div class="summary-row"><span>Subtotal</span><span id="co-subtotal"></span></div>
+          <div class="summary-row"><span>Delivery</span><span id="co-delivery"></span></div>
+          <div class="summary-row total"><span>Total</span><span id="co-total"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="co-footer">
+      <button class="place-order-btn" id="place-order-btn" onclick="handlePlaceOrder()">
+        Place Order · <span id="btn-total"></span>
+      </button>
+    </div>
+  </div>
+
+  <div id="success-view" class="hidden success-wrap">
+    <div class="success-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2>Order Placed!</h2>
+    <p>Your order has been placed successfully. The seller will prepare your item and you'll pay cash when it's delivered.</p>
+    <div class="order-id" id="order-id-display"></div>
+    <div class="success-btns">
+      <button class="success-btn-primary" onclick="window.location.href='/orders'">View My Orders</button>
+      <button class="success-btn-secondary" onclick="window.location.href='/'">Continue Shopping</button>
+    </div>
+  </div>
+
+</div>
+
+<%- include("../partials/admin-switcher") %>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { getCurrentUser } from "/js/auth.js";
+import { getCart, getCartSubtotal, getCartTotal, clearCart, DELIVERY_FEE } from "/js/cart.js";
+import { placeOrder } from "/js/products.js";
+
+let currentUser = null;
+
+function formatNaira(n) { return "₦" + Number(n).toLocaleString("en-NG"); }
+function escHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function toastMsg(msg, dur = 2200) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+window.toast = toastMsg;
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add("show");
+}
+function clearErrs() {
+  document.querySelectorAll(".field-error").forEach(e => { e.textContent = ""; e.classList.remove("show"); });
+}
+
+async function init() {
+  currentUser = await getCurrentUser();
+  if (!currentUser) { window.location.href = "/auth"; return; }
+
+  const cart = getCart();
+  if (!cart.length) {
+    toastMsg("Your cart is empty");
+    setTimeout(() => window.location.href = "/cart", 1200);
+    return;
+  }
+
+  // Pre-fill name from account
+  document.getElementById("f-name").value = currentUser.name || "";
+
+  renderSummary(cart);
+}
+
+function renderSummary(cart) {
+  document.getElementById("co-items").innerHTML = cart.map(item => `
+    <div class="co-item-row">
+      <div class="co-item-thumb">${item.imageUrl ? `<img src="${item.imageUrl}"/>` : ""}</div>
+      <div class="co-item-name">${escHtml(item.name)}</div>
+      <div class="co-item-qty">×${item.qty}</div>
+      <div class="co-item-price">${formatNaira(item.price * item.qty)}</div>
+    </div>
+  `).join("");
+
+  const subtotal = getCartSubtotal();
+  const total = getCartTotal();
+  document.getElementById("co-subtotal").textContent = formatNaira(subtotal);
+  document.getElementById("co-delivery").textContent = formatNaira(DELIVERY_FEE);
+  document.getElementById("co-total").textContent = formatNaira(total);
+  document.getElementById("btn-total").textContent = formatNaira(total);
+}
+
+window.handlePlaceOrder = async function () {
+  clearErrs();
+  const name    = document.getElementById("f-name").value.trim();
+  const phone   = document.getElementById("f-phone").value.trim();
+  const address = document.getElementById("f-address").value.trim();
+  const remark  = document.getElementById("f-remark").value.trim();
+
+  let hasError = false;
+  if (!name) { showErr("err-name", "Enter your name."); hasError = true; }
+  if (!phone || phone.replace(/\D/g, "").length < 10) { showErr("err-phone", "Enter a valid phone number."); hasError = true; }
+  if (!address || address.length < 8) { showErr("err-address", "Enter your full delivery address."); hasError = true; }
+  if (hasError) return;
+
+  const cart = getCart();
+  if (!cart.length) { toastMsg("Your cart is empty"); return; }
+
+  const btn = document.getElementById("place-order-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    // Server re-verifies prices/availability against the database before
+    // charging anything to the order total, and creates a notification
+    // for every seller involved — see POST /api/orders.
+    const order = await placeOrder({
+      items: cart.map(i => ({ productId: i.productId, qty: i.qty })),
+      buyerName: name,
+      buyerPhone: phone,
+      deliveryAddress: address,
+      remark: remark || null
+    });
+
+    clearCart();
+
+    document.getElementById("checkout-view").classList.add("hidden");
+    document.getElementById("success-view").classList.remove("hidden");
+    document.getElementById("success-view").style.display = "flex";
+    document.getElementById("order-id-display").textContent = `Order #${String(order.id).padStart(6, "0")}`;
+  } catch (e) {
+    toastMsg("Couldn't place order: " + e.message);
+    btn.disabled = false;
+    btn.innerHTML = `Place Order · ${formatNaira(getCartTotal())}`;
+    console.error(e);
+  }
+};
+
+init();
+</script>
+</body>
+</html>

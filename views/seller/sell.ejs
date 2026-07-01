@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Tradehub — List an Item</title>
+<link rel="stylesheet" href="/css/style.css"/>
+<style>
+  .sell-header {
+    padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  }
+  .sell-header h1 { font-size: 16.5px; font-weight: 800; color: var(--text); }
+
+  .sell-body { flex: 1; padding: 18px 16px 28px; overflow-y: auto; }
+
+  .photo-upload-row { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+  .photo-slot {
+    width: 72px; height: 72px; border-radius: var(--r-md);
+    background: var(--surface); border: 1.5px dashed var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; cursor: pointer; position: relative; overflow: hidden;
+  }
+  .photo-slot.filled { border-style: solid; border-color: var(--border); }
+  .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-slot .remove-photo {
+    position: absolute; top: 3px; right: 3px;
+    width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,.55);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-slot.uploading::after {
+    content: ''; position: absolute; inset: 0; background: rgba(255,255,255,.7);
+  }
+  .photo-hint { font-size: 11px; color: var(--text-faint); margin-bottom: 22px; margin-top: -14px; }
+
+  .sell-field { margin-bottom: 16px; }
+  .sell-label { font-size: 12.5px; color: var(--text-dim); font-weight: 600; margin-bottom: 7px; display: block; }
+  .sell-input-box {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--r-md); padding: 13px 15px;
+    transition: border-color .15s;
+  }
+  .sell-input-box:focus-within { border-color: var(--blue); }
+  .sell-input-box input, .sell-input-box select, .sell-input-box textarea {
+    border: none; outline: none; background: transparent;
+    font-size: 13.5px; color: var(--text); width: 100%; font-family: 'Outfit', sans-serif;
+  }
+  .sell-input-box textarea { resize: none; min-height: 80px; }
+  .sell-input-box select { appearance: none; -webkit-appearance: none; cursor: pointer; }
+  .char-count { font-size: 11px; color: var(--text-faint); text-align: right; margin-top: 4px; }
+
+  .price-row { display: flex; gap: 10px; }
+  .price-row .sell-field { flex: 1; }
+
+  .field-error { font-size: 12px; color: var(--danger); margin-top: 6px; display: none; }
+  .field-error.show { display: block; }
+
+  .list-btn {
+    width: 100%; background: var(--accent-grad); border-radius: var(--r-md);
+    padding: 16px; text-align: center; color: #fff; font-weight: 800; font-size: 14.5px;
+    margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .list-btn:disabled { opacity: .55; }
+
+  .spinner { width: 20px; height: 20px; border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .auth-required {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 24px; text-align: center; gap: 14px;
+  }
+  .auth-required svg { width: 52px; height: 52px; color: var(--border); }
+  .auth-required p { color: var(--text-dim); font-size: 14px; line-height: 1.6; }
+  .auth-required .login-btn { background: var(--blue); color: #fff; font-weight: 700; font-size: 13.5px; padding: 12px 28px; border-radius: var(--r-pill); }
+</style>
+</head>
+<body>
+<div class="app safe-top safe-bottom">
+
+  <div class="sell-header">
+    <button onclick="window.location.href='/'" style="display:flex;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16213A" stroke-width="2.5"><path d="M19 12H5M5 12l7-7M5 12l7 7"/></svg>
+    </button>
+    <h1>List an Item</h1>
+  </div>
+
+  <div id="auth-gate" class="hidden">
+    <div class="auth-required">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <p>You'll need to sign in to list an item for sale on Tradehub.</p>
+      <button class="login-btn" onclick="window.location.href='/auth'">Sign In</button>
+    </div>
+  </div>
+
+  <div id="buyer-gate" class="hidden">
+    <div class="auth-required">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+      <p>Your account is set up for buying only. Switch your account to Seller or Both in Edit Profile to start listing items.</p>
+      <button class="login-btn" onclick="window.location.href='/profile/edit'">Go to Edit Profile</button>
+    </div>
+  </div>
+
+  <div id="subscription-gate" class="hidden">
+    <div class="auth-required">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <p id="subscription-gate-msg">Your free trial has ended. Subscribe for ₦1,500/month to keep listing items on Tradehub.</p>
+      <button class="login-btn" onclick="window.location.href='/subscribe'">Subscribe Now</button>
+    </div>
+  </div>
+
+  <div id="trial-banner" class="hidden" style="background:var(--accent-bg-soft);color:var(--accent-end);font-size:12px;font-weight:700;padding:10px 16px;text-align:center;">
+  </div>
+
+  <div id="sell-form-wrap" class="hidden" style="display:flex;flex-direction:column;flex:1;">
+    <div class="sell-body">
+      <label class="sell-label">Photos (up to 6)</label>
+      <div class="photo-upload-row" id="photo-row">
+        <div class="photo-slot" id="add-photo-slot" onclick="document.getElementById('photo-input').click()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C5D4E6" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" multiple style="display:none;" onchange="handlePhotoSelect(this)"/>
+      </div>
+      <div class="photo-hint">First photo will be the main image shown in listings.</div>
+
+      <div class="sell-field">
+        <label class="sell-label">Item name</label>
+        <div class="sell-input-box">
+          <input type="text" id="f-name" placeholder="e.g. Wireless Bluetooth Earbuds" maxlength="80"/>
+        </div>
+        <div class="field-error" id="err-name"></div>
+      </div>
+
+      <div class="price-row">
+        <div class="sell-field">
+          <label class="sell-label">Price (₦)</label>
+          <div class="sell-input-box">
+            <input type="number" id="f-price" placeholder="0" min="0" inputmode="numeric"/>
+          </div>
+        </div>
+        <div class="sell-field">
+          <label class="sell-label">Old price (optional)</label>
+          <div class="sell-input-box">
+            <input type="number" id="f-old-price" placeholder="0" min="0" inputmode="numeric"/>
+          </div>
+        </div>
+      </div>
+      <div class="field-error" id="err-price"></div>
+
+      <div class="sell-field">
+        <label class="sell-label">Category</label>
+        <div class="sell-input-box">
+          <select id="f-category">
+            <option value="">Select a category</option>
+          </select>
+        </div>
+        <div class="field-error" id="err-category"></div>
+      </div>
+
+      <div class="sell-field">
+        <label class="sell-label">Your location</label>
+        <div class="sell-input-box">
+          <input type="text" id="f-location" placeholder="e.g. Lagos, Abuja, Ibadan" maxlength="40"/>
+        </div>
+      </div>
+
+      <div class="sell-field">
+        <label class="sell-label">Description</label>
+        <div class="sell-input-box">
+          <textarea id="f-desc" placeholder="Describe condition, size, what's included, etc." maxlength="500"></textarea>
+        </div>
+        <div class="char-count" id="desc-count">0/500</div>
+      </div>
+
+      <button class="list-btn" id="list-btn" onclick="handleListItem()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        List Item for Sale
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<%- include("../partials/admin-switcher") %>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { getCurrentUser } from "/js/auth.js";
+import { getSubscription, getAccessState } from "/js/subscriptions.js";
+import { CATEGORIES, createProduct } from "/js/products.js";
+// Cloudinary config is injected server-side from environment variables
+// (see routes/seller/pages.js) so it never has to be hardcoded here.
+const CLOUDINARY_CLOUD_NAME = <%- JSON.stringify(cloudinaryCloudName) %>;
+const CLOUDINARY_UPLOAD_PRESET = <%- JSON.stringify(cloudinaryUploadPreset) %>;
+
+let currentUser  = null;
+let uploadedPhotos = []; // array of Cloudinary URLs, in order
+
+function toastMsg(msg, dur = 2500) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), dur);
+}
+window.toast = toastMsg;
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add("show");
+}
+function clearErrs() {
+  document.querySelectorAll(".field-error").forEach(e => { e.textContent = ""; e.classList.remove("show"); });
+}
+
+// ── Auth gate ──────────────────────────────────────────
+async function init() {
+  currentUser = await getCurrentUser();
+  if (!currentUser) {
+    showGate("auth-gate");
+    return;
+  }
+  if (currentUser.role === "buyer") {
+    showGate("buyer-gate");
+    return;
+  }
+
+  // Seller/both accounts need an active trial or paid subscription to
+  // list items. Pure buyers (handled above) skip this check entirely.
+  const sub = await getSubscription(currentUser.id);
+  const state = getAccessState(sub);
+
+  if (state === "expired" || state === "none") {
+    document.getElementById("subscription-gate-msg").textContent =
+      state === "none"
+        ? "Listing items requires an active subscription (₦1,500/month). Subscribe to get started."
+        : "Your free trial has ended. Subscribe for ₦1,500/month to keep listing items on Tradehub.";
+    showGate("subscription-gate");
+    return;
+  }
+
+  if (state === "trial") {
+    const daysLeft = Math.max(1, Math.ceil((sub.trialEnd - Date.now()) / (24 * 60 * 60 * 1000)));
+    const banner = document.getElementById("trial-banner");
+    banner.textContent = `Free trial — ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`;
+    banner.classList.remove("hidden");
+    banner.style.display = "block";
+  }
+
+  document.getElementById("sell-form-wrap").classList.remove("hidden");
+  populateCategories();
+}
+
+function showGate(id) {
+  const gate = document.getElementById(id);
+  gate.classList.remove("hidden");
+  gate.style.display = "flex";
+  gate.style.flexDirection = "column";
+  gate.style.flex = "1";
+}
+
+function populateCategories() {
+  const select = document.getElementById("f-category");
+  CATEGORIES.forEach(cat => {
+    const opt = document.createElement("option");
+    opt.value = cat.id;
+    opt.textContent = cat.label;
+    select.appendChild(opt);
+  });
+}
+
+// ── Photo upload (Cloudinary, unsigned preset) ─────────
+async function uploadToCloudinary(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    method: "POST",
+    body: fd
+  });
+  if (!res.ok) throw new Error("Upload failed. Check your Cloudinary config.");
+  const data = await res.json();
+  return data.secure_url;
+}
+
+window.handlePhotoSelect = async function (input) {
+  const files = Array.from(input.files || []).slice(0, 6 - uploadedPhotos.length);
+  if (!files.length) return;
+
+  for (const file of files) {
+    const slot = document.createElement("div");
+    slot.className = "photo-slot uploading";
+    const previewUrl = URL.createObjectURL(file);
+    slot.innerHTML = `<img src="${previewUrl}"/>`;
+    document.getElementById("add-photo-slot").before(slot);
+
+    try {
+      const url = await uploadToCloudinary(file);
+      uploadedPhotos.push(url);
+      slot.classList.remove("uploading");
+      const removeBtn = document.createElement("div");
+      removeBtn.className = "remove-photo";
+      removeBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+      const photoIndex = uploadedPhotos.length - 1;
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        uploadedPhotos.splice(photoIndex, 1);
+        slot.remove();
+      };
+      slot.appendChild(removeBtn);
+    } catch (e) {
+      slot.remove();
+      toastMsg("Photo upload failed: " + e.message);
+    }
+  }
+
+  if (uploadedPhotos.length >= 6) {
+    document.getElementById("add-photo-slot").style.display = "none";
+  }
+  input.value = "";
+};
+
+// ── Description char counter ───────────────────────────
+document.getElementById("f-desc").addEventListener("input", (e) => {
+  document.getElementById("desc-count").textContent = `${e.target.value.length}/500`;
+});
+
+// ── Submit listing ──────────────────────────────────────
+window.handleListItem = async function () {
+  clearErrs();
+  const name      = document.getElementById("f-name").value.trim();
+  const price     = Number(document.getElementById("f-price").value);
+  const oldPrice  = Number(document.getElementById("f-old-price").value) || null;
+  const category  = document.getElementById("f-category").value;
+  const location  = document.getElementById("f-location").value.trim() || "Nigeria";
+  const desc      = document.getElementById("f-desc").value.trim();
+
+  let hasError = false;
+  if (!name) { showErr("err-name", "Enter an item name."); hasError = true; }
+  if (!price || price <= 0) { showErr("err-price", "Enter a valid price."); hasError = true; }
+  if (oldPrice && oldPrice <= price) { showErr("err-price", "Old price should be higher than the current price."); hasError = true; }
+  if (!category) { showErr("err-category", "Select a category."); hasError = true; }
+  if (hasError) return;
+
+  const btn = document.getElementById("list-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    const productId = await createProduct({
+      name,
+      description: desc || "No description provided.",
+      price,
+      oldPrice,
+      category,
+      sellerName: currentUser.name,
+      sellerId: currentUser.id,
+      sellerPhone: currentUser.phone || null,
+      sellerLocation: location,
+      imageUrl: uploadedPhotos[0] || null,
+      images: uploadedPhotos
+    });
+    toastMsg("Listed! Your item is awaiting review before it goes live.");
+    setTimeout(() => window.location.href = `/product/${productId}`, 1400);
+  } catch (e) {
+    toastMsg("Couldn't list item: " + e.message);
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> List Item for Sale`;
+  }
+};
+
+init();
+</script>
+</body>
+</html>
