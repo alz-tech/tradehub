@@ -10,6 +10,8 @@ const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
 
 const pool = require("./db/pool");
+const { runMigration } = require("./db/migrate");
+const { seedAdmins } = require("./db/seed-admins");
 const { attachUser } = require("./middleware/auth");
 
 const app = express();
@@ -52,6 +54,7 @@ app.use("/api/notifications", require("./routes/api/notifications"));
 app.use("/api/subscriptions", require("./routes/api/subscriptions").router);
 app.use("/api/payments", require("./routes/api/payments"));
 app.use("/api/admin", require("./routes/api/admin"));
+app.use("/api/users", require("./routes/api/users"));
 
 // ── Page (view) routes — organized by audience ──────────
 app.use(require("./routes/auth-page"));
@@ -72,6 +75,29 @@ app.use((err, req, res, next) => {
   res.status(500).send("Something went wrong.");
 });
 
-app.listen(PORT, () => {
-  console.log(`Tradehub running on port ${PORT} (${isProd ? "production" : "development"})`);
-});
+// ── Schema + admin seeding ───────────────────────────────
+// Runs before the server starts accepting traffic, so the very first
+// request — cart, account, signup, anything — hits a database that
+// already has its tables. Every statement in schema.sql is
+// CREATE ... IF NOT EXISTS, so this is safe to run on every boot,
+// including against a database that's already fully migrated.
+async function bootstrap() {
+  try {
+    await runMigration(pool);
+    console.log("Database schema is up to date.");
+    await seedAdmins(pool);
+  } catch (err) {
+    // If this fails (e.g. bad DATABASE_URL, Neon still waking up from
+    // idle), log loudly but still start the server — attachUser and
+    // the rest of the app already handle a missing/unreachable DB per
+    // request without crashing the process, so a transient failure
+    // here shouldn't make the whole app unreachable.
+    console.error("Startup schema check failed — the app will still start, but requests that touch the database may fail until this is resolved:", err.message);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Tradehub running on port ${PORT} (${isProd ? "production" : "development"})`);
+  });
+}
+
+bootstrap();

@@ -93,6 +93,22 @@
   .sub-btn { font-size: 11px; font-weight: 700; padding: 7px 10px; border-radius: var(--r-sm); background: var(--field-bg); color: var(--text-dim); }
   .sub-btn.primary { background: #E0F0FF; color: var(--blue); }
   .sub-btn.danger { background: #FFE5EC; color: var(--danger); }
+
+  /* ── Users tab ── */
+  .usr-card { background: var(--surface); border-radius: var(--r-lg); padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(20,30,50,.05); }
+  .usr-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+  .usr-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .usr-handle { color: var(--text-faint); font-weight: 500; }
+  .usr-badges { display: flex; gap: 6px; flex-shrink: 0; }
+  .usr-pill { font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: var(--r-pill); text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
+  .usr-pill.admin { background: var(--accent-bg-soft); color: var(--accent-end); }
+  .usr-pill.invincible { background: #FFF3E0; color: #C17A00; display: inline-flex; align-items: center; gap: 3px; }
+  .usr-detail { font-size: 11.5px; color: var(--text-dim); margin-bottom: 10px; }
+  .usr-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .usr-btn { font-size: 11px; font-weight: 700; padding: 7px 10px; border-radius: var(--r-sm); background: var(--field-bg); color: var(--text-dim); }
+  .usr-btn.primary { background: #E0F0FF; color: var(--blue); }
+  .usr-btn.danger { background: #FFE5EC; color: var(--danger); }
+  .usr-btn:disabled, .usr-btn.disabled { opacity: .45; }
 </style>
 </head>
 <body>
@@ -120,6 +136,7 @@
       <div class="ad-tab" data-tab="rejected" onclick="switchTab('rejected')">Rejected</div>
       <div class="ad-tab" data-tab="tools" onclick="switchTab('tools')">Tools</div>
       <div class="ad-tab" data-tab="subs" onclick="switchTab('subs')">Subs</div>
+      <div class="ad-tab" data-tab="users" onclick="switchTab('users')">Users</div>
     </div>
 
     <div class="ad-body" id="ad-body">
@@ -151,6 +168,10 @@ import {
 import {
   adminStartTrial, adminGrantPaidDays, adminEndAccess
 } from "/js/subscriptions.js";
+
+import {
+  getAllUsers, promoteUser, demoteUser, deleteUser
+} from "/js/users.js";
 
 // ════════════════════════════════════════════════════
 // ADMIN ACCESS: this is now enforced server-side. The /admin route
@@ -185,6 +206,7 @@ async function init() {
     document.getElementById("denied-view").style.display = "flex";
     return;
   }
+  currentUsername = user.username;
 
   document.getElementById("loading").classList.add("hidden");
   document.getElementById("admin-view").classList.remove("hidden");
@@ -208,6 +230,10 @@ async function loadTab(tab) {
     }
     if (tab === "subs") {
       await renderSubsTab();
+      return;
+    }
+    if (tab === "users") {
+      await renderUsersTab();
       return;
     }
 
@@ -463,6 +489,100 @@ window.handleEndAccess = async function (username) {
     await renderSubsTab();
   } catch (e) {
     toastMsg("Couldn't end access: " + e.message);
+  }
+};
+
+// ── Users tab ──────────────────────────────────────────
+// Every account, with the ability to promote/demote admin status or
+// delete the account. Accounts flagged "protected" (invincible) show
+// a badge instead of action buttons — enforced server-side too
+// (routes/api/users.js), so this is a UI convenience, not the real
+// gate. currentUsername lets the acting admin see, but not act on,
+// their own row where that would be confusing (e.g. deleting yourself).
+let currentUsername = null;
+
+function invincibleBadgeSvg() {
+  return `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5l-9-4z"/></svg>`;
+}
+
+async function renderUsersTab() {
+  const body = document.getElementById("ad-body");
+  try {
+    const users = await getAllUsers();
+    if (!users.length) {
+      body.innerHTML = `<div class="empty-state"><p>No accounts yet.</p></div>`;
+      return;
+    }
+
+    body.innerHTML = users.map(u => {
+      const isSelf = u.username === currentUsername;
+      const badges = [
+        u.isAdmin ? `<span class="usr-pill admin">Admin</span>` : "",
+        u.isProtected ? `<span class="usr-pill invincible">${invincibleBadgeSvg()} Invincible</span>` : ""
+      ].join("");
+
+      let actions;
+      if (u.isProtected) {
+        actions = `<span style="font-size:11px;color:var(--text-faint);">Protected — can't be changed here</span>`;
+      } else if (isSelf) {
+        actions = `<span style="font-size:11px;color:var(--text-faint);">This is your account</span>`;
+      } else {
+        actions = `
+          ${u.isAdmin
+            ? `<button class="usr-btn" onclick="handleDemote('${u.username}')">Remove Admin</button>`
+            : `<button class="usr-btn primary" onclick="handlePromote('${u.username}')">Make Admin</button>`
+          }
+          <button class="usr-btn danger" onclick="handleDeleteUser('${u.username}')">Delete Account</button>
+        `;
+      }
+
+      return `
+        <div class="usr-card">
+          <div class="usr-top-row">
+            <span class="usr-name">${escHtml(u.name || u.username)} <span class="usr-handle">@${escHtml(u.username)}</span></span>
+            <div class="usr-badges">${badges}</div>
+          </div>
+          <div class="usr-detail">${escHtml(u.role || "buyer")}${u.phone ? " · " + escHtml(u.phone) : ""}</div>
+          <div class="usr-actions">${actions}</div>
+        </div>
+      `;
+    }).join("");
+  } catch (e) {
+    console.error(e);
+    body.innerHTML = `<div class="empty-state"><p>Couldn't load users.<br/><span style="font-size:11px;color:var(--text-faint);word-break:break-word;">${escHtml(e.message)}</span></p></div>`;
+  }
+}
+
+window.handlePromote = async function (username) {
+  if (!confirm(`Give @${username} admin access?`)) return;
+  try {
+    await promoteUser(username);
+    toastMsg(`@${username} is now an admin`);
+    await renderUsersTab();
+  } catch (e) {
+    toastMsg("Couldn't promote: " + e.message);
+  }
+};
+
+window.handleDemote = async function (username) {
+  if (!confirm(`Remove admin access from @${username}?`)) return;
+  try {
+    await demoteUser(username);
+    toastMsg(`Admin access removed from @${username}`);
+    await renderUsersTab();
+  } catch (e) {
+    toastMsg("Couldn't remove admin: " + e.message);
+  }
+};
+
+window.handleDeleteUser = async function (username) {
+  if (!confirm(`Permanently delete @${username}'s account? This can't be undone.`)) return;
+  try {
+    await deleteUser(username);
+    toastMsg(`@${username} deleted`);
+    await renderUsersTab();
+  } catch (e) {
+    toastMsg("Couldn't delete: " + e.message);
   }
 };
 

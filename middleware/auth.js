@@ -29,6 +29,7 @@ function mapUser(row) {
     rating: row.rating !== undefined ? Number(row.rating) : 0,
     totalSales: row.total_sales,
     isAdmin: !!row.is_admin,
+    isProtected: !!row.is_protected,
     createdAt: row.created_at
   };
 }
@@ -46,7 +47,7 @@ async function attachUser(req, res, next) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT username, name, phone, role, avatar_color, avatar_url, rating, total_sales, is_admin, created_at
+      `SELECT username, name, phone, role, avatar_color, avatar_url, rating, total_sales, is_admin, is_protected, created_at
        FROM users WHERE username = $1`,
       [username]
     );

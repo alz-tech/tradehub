@@ -9,6 +9,14 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const pool = require("../../db/pool");
 const { ADMIN_USERNAMES, mapUser } = require("../../middleware/auth");
+const { DESIGNATED_ADMINS } = require("../../db/seed-admins");
+
+// Looks up a username against the designated-admins list (db/seed-admins.js)
+// so a fresh signup is granted admin (and protected, if flagged)
+// immediately — without needing to wait for the next server restart.
+function designatedAdmin(username) {
+  return DESIGNATED_ADMINS.find(a => a.username === username) || null;
+}
 
 const router = express.Router();
 
@@ -43,10 +51,13 @@ router.post("/signup", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const designated = designatedAdmin(username);
+    const isAdmin = ADMIN_USERNAMES.includes(username) || !!designated;
+    const isProtected = !!designated?.protected;
     const { rows } = await client.query(
-      `INSERT INTO users (username, password_hash, name, phone, role, avatar_color, is_admin)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [username, passwordHash, name || username, phone || null, role, avatarColor || "#3DA9FC", ADMIN_USERNAMES.includes(username)]
+      `INSERT INTO users (username, password_hash, name, phone, role, avatar_color, is_admin, is_protected)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [username, passwordHash, name || username, phone || null, role, avatarColor || "#3DA9FC", isAdmin, isProtected]
     );
 
     // Sellers (and "both") get an automatic 14-day free trial, same as before.

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   rating          NUMERIC DEFAULT 0,
   total_sales     INTEGER DEFAULT 0,
   is_admin        BOOLEAN NOT NULL DEFAULT FALSE,
+  is_protected    BOOLEAN NOT NULL DEFAULT FALSE, -- "invincible": can't be demoted, disabled, or deleted via the admin users list
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

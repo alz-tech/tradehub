@@ -38,7 +38,8 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Outfit', sans-serif;
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 body { display: flex; flex-direction: column; align-items: center; }
@@ -49,14 +50,23 @@ input, textarea { font-family: inherit; }
 .app {
   width: 100%;
   max-width: 480px;
-  min-height: 100vh;
+  height: 100dvh; /* dynamic viewport height: avoids the jump 100vh causes when a mobile browser's own UI chrome shows/hides on scroll */
   display: flex;
   flex-direction: column;
   background: var(--bg);
   position: relative;
+  overflow: hidden; /* .app is a fixed-height box, NOT itself a scroll container — it hands scrolling down to whichever flex child inside it opts in (flex:1 + overflow-y:auto, e.g. .co-body, .app-scroll below). This is what lets a header/footer stay fixed while only the middle content scrolls, and gives a plain flex-shrink:0 bottom bar (like .bottom-nav) a true, fixed bottom edge to sit on — instead of "sticky" floating wherever the page's natural height happens to end, which is what was happening before. */
 }
 .safe-top { padding-top: env(safe-area-inset-top); }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Drop-in scroll wrapper for pages that don't already have their own
+   scoped "middle section scrolls" rule (e.g. checkout's .co-body).
+   Wrap a page's scrollable middle content in
+   <div class="app-scroll">...</div>, with flex-shrink:0 bars (like
+   .bottom-nav) as siblings after it — still inside .app, not inside
+   .app-scroll — so they stay pinned to the true bottom edge. */
+.app-scroll { flex: 1; overflow-y: auto; min-height: 0; }
 
 /* ── Header ── */
 .th-header {
@@ -153,7 +163,13 @@ input, textarea { font-family: inherit; }
   display: flex; justify-content: space-around; align-items: center;
   padding: 10px 0 calc(12px + env(safe-area-inset-bottom));
   background: var(--surface); border-top: 1px solid var(--border);
-  position: sticky; bottom: 0; flex-shrink: 0; z-index: 10;
+  flex-shrink: 0; z-index: 10;
+  /* No position:sticky/fixed needed: .app is now a fixed-height,
+     non-scrolling flex column (see .app above), and .bottom-nav sits
+     as a plain flex-shrink:0 sibling AFTER the page's scrollable
+     content (e.g. wrapped in .app-scroll). Ordinary flex layout then
+     puts it at .app's true bottom edge on every page, with no
+     dependency on which element happens to be scrolling. */
 }
 .nav-item {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
