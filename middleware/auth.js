@@ -35,10 +35,9 @@ function mapUser(row) {
 }
 
 // Attaches req.user (full row, minus password_hash) on every request if
-// a session exists. Also figures out req.isAdmin and req.viewMode, so
-// templates/routes never need to re-check the allowlist themselves.
+// a session exists. Also figures out req.isAdmin, so templates/routes
+// never need to re-check the allowlist themselves.
 async function attachUser(req, res, next) {
-  res.locals.viewMode = null;
   res.locals.user = null;
   res.locals.isAdmin = false;
 
@@ -59,18 +58,10 @@ async function attachUser(req, res, next) {
     const user = mapUser(rows[0]);
     const isAdmin = ADMIN_USERNAMES.includes(username) || user.isAdmin;
 
-    // Admins can switch which dashboard they're looking at (buyer /
-    // seller / admin) without logging into a different account — the
-    // chosen mode is stored on the session and defaults to "admin".
-    let viewMode = req.session.viewMode || "admin";
-    if (!isAdmin) viewMode = user.role === "seller" ? "seller" : "buyer";
-
     req.user = user;
     req.isAdmin = isAdmin;
-    req.viewMode = viewMode;
     res.locals.user = user;
     res.locals.isAdmin = isAdmin;
-    res.locals.viewMode = viewMode;
     next();
   } catch (err) {
     next(err);

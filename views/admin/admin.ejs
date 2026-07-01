@@ -156,11 +156,10 @@
   </div>
 </div>
 
-<%- include("../partials/admin-switcher") %>
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { getSessionInfo, getAllSellers, setViewMode } from "/js/auth.js";
+import { getSessionInfo, getAllSellers } from "/js/auth.js";
 import {
   getPendingProducts, getAllProductsForAdmin, approveProduct, rejectProduct, deleteProduct
 } from "/js/products.js";

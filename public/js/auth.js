@@ -67,7 +67,3 @@ export async function getAllSellers() {
   const data = await api("/subscriptions/sellers");
   return data.sellers;
 }
-
-export async function setViewMode(mode) {
-  return api("/auth/view-mode", { method: "POST", body: JSON.stringify({ mode }) });
-}

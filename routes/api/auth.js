@@ -105,7 +105,6 @@ router.post("/login", async (req, res) => {
     }
 
     req.session.username = username;
-    req.session.viewMode = ADMIN_USERNAMES.includes(username) || rows[0].is_admin ? "admin" : null;
     res.json({ success: true, user: mapUser(rows[0]) });
   } catch (err) {
     console.error("login error:", err);
@@ -124,18 +123,7 @@ router.post("/logout", (req, res) => {
 // ── Current session ────────────────────────────────────
 router.get("/me", async (req, res) => {
   if (!req.user) return res.json({ user: null });
-  res.json({ user: req.user, isAdmin: req.isAdmin, viewMode: req.viewMode });
-});
-
-// ── Admin view switcher (buyer / seller / admin) ──────
-router.post("/view-mode", (req, res) => {
-  if (!req.isAdmin) return res.status(403).json({ success: false, error: "Admin access only." });
-  const { mode } = req.body || {};
-  if (!["buyer", "seller", "admin"].includes(mode)) {
-    return res.status(400).json({ success: false, error: "Invalid view mode." });
-  }
-  req.session.viewMode = mode;
-  res.json({ success: true, viewMode: mode });
+  res.json({ user: req.user, isAdmin: req.isAdmin });
 });
 
 // ── Update profile ─────────────────────────────────────
