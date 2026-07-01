@@ -143,6 +143,15 @@ function formatDate(ts) {
   return d.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// createdAt now arrives as a plain ISO string from Postgres (see
+// routes/api/orders.js), not a Firestore Timestamp — this covers both
+// shapes so sorting by date keeps working regardless of source.
+function toMillis(ts) {
+  if (!ts) return 0;
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.getTime() || 0;
+}
+
 async function init() {
   currentUser = await getCurrentUser();
   if (!currentUser) { window.location.href = "/auth"; return; }
@@ -236,7 +245,7 @@ window.handleMarkReceived = async function (orderId, btn) {
     const order = orderCache[orderId];
     if (order) order.status = "delivered";
     toastMsg("Marked as received. Thanks for confirming!");
-    renderOrders(Object.values(orderCache).sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)));
+    renderOrders(Object.values(orderCache).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)));
   } catch (e) {
     toastMsg("Couldn't update order: " + e.message);
     if (btn) { btn.disabled = false; btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> I've Received This`; }

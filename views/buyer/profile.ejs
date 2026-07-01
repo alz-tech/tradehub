@@ -210,6 +210,7 @@
 import { getCurrentUser, logout } from "/js/auth.js";
 import { getCartCount } from "/js/cart.js";
 import { getMyOrders, getMyProducts } from "/js/products.js";
+import { confirmDialog } from "/js/ui.js";
 
 function toastMsg(msg, dur = 2200) {
   const el = document.getElementById("toast");
@@ -220,7 +221,7 @@ function toastMsg(msg, dur = 2200) {
 window.toast = toastMsg;
 
 window.handleLogout = async function () {
-  if (!confirm("Log out of Tradehub?")) return;
+  if (!(await confirmDialog("Log out of Tradehub?", { title: "Log out?", confirmLabel: "Log Out", danger: false }))) return;
   await logout();
   window.location.href = "/auth";
 };

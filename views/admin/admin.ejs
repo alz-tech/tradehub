@@ -65,20 +65,6 @@
   .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Reject modal ── */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; display: flex; align-items: flex-end; justify-content: center; }
-  .modal-box { background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px; width: 100%; max-width: 480px; }
-  .modal-box h3 { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
-  .modal-box textarea {
-    width: 100%; background: var(--field-bg); border: 1.5px solid var(--border); border-radius: var(--r-md);
-    padding: 12px 14px; font-size: 13px; color: var(--text); font-family: 'Outfit', sans-serif;
-    min-height: 80px; resize: none; margin-bottom: 14px; outline: none;
-  }
-  .modal-btns { display: flex; gap: 10px; }
-  .modal-btn { flex: 1; padding: 13px; border-radius: var(--r-md); text-align: center; font-size: 13.5px; font-weight: 700; }
-  .modal-btn.cancel { background: var(--field-bg); color: var(--text-dim); }
-  .modal-btn.confirm { background: var(--danger); color: #fff; }
-
   /* ── Subscriptions tab ── */
   .sub-card { background: var(--surface); border-radius: var(--r-lg); padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(20,30,50,.05); }
   .sub-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -121,7 +107,7 @@
     <p>This page isn't available.</p>
   </div>
 
-  <div id="admin-view" class="hidden" style="display:flex;flex-direction:column;flex:1;">
+  <div id="admin-view" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0;">
     <div class="ad-header">
       <button onclick="window.location.href='/'" style="display:flex;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M19 12H5M5 12l7-7M5 12l7 7"/></svg>
@@ -160,6 +146,7 @@
 
 <script type="module">
 import { getSessionInfo, getAllSellers } from "/js/auth.js";
+import { confirmDialog } from "/js/ui.js";
 import {
   getPendingProducts, getAllProductsForAdmin, approveProduct, rejectProduct, deleteProduct
 } from "/js/products.js";
@@ -389,7 +376,7 @@ window.handleCleanupDemo = async function () {
 };
 
 window.confirmDeleteDemo = async function () {
-  if (!confirm(`Permanently delete ${window.__demoProductIds.length} demo product(s)? This can't be undone.`)) return;
+  if (!(await confirmDialog(`Permanently delete ${window.__demoProductIds.length} demo product(s)? This can't be undone.`, { confirmLabel: "Delete" }))) return;
   try {
     await Promise.all(window.__demoProductIds.map(id => deleteProduct(id)));
     toastMsg(`Deleted ${window.__demoProductIds.length} demo product(s)`);
@@ -459,7 +446,7 @@ async function renderSubsTab() {
 }
 
 window.handleStartTrial = async function (username) {
-  if (!confirm(`Start a fresh 14-day trial for @${username}? This resets their trial countdown.`)) return;
+  if (!(await confirmDialog(`Start a fresh 14-day trial for @${username}? This resets their trial countdown.`, { confirmLabel: "Start Trial", danger: false }))) return;
   try {
     await adminStartTrial(username, 14);
     toastMsg(`14-day trial started for @${username}`);
@@ -470,7 +457,7 @@ window.handleStartTrial = async function (username) {
 };
 
 window.handleGrantPaid = async function (username) {
-  if (!confirm(`Grant @${username} 30 days of paid access (e.g. for an offline/bank transfer payment)?`)) return;
+  if (!(await confirmDialog(`Grant @${username} 30 days of paid access (e.g. for an offline/bank transfer payment)?`, { confirmLabel: "Grant Access", danger: false }))) return;
   try {
     await adminGrantPaidDays(username, 30);
     toastMsg(`30 paid days granted to @${username}`);
@@ -481,7 +468,7 @@ window.handleGrantPaid = async function (username) {
 };
 
 window.handleEndAccess = async function (username) {
-  if (!confirm(`End @${username}'s seller access now? They won't be able to list new items until they subscribe again.`)) return;
+  if (!(await confirmDialog(`End @${username}'s seller access now? They won't be able to list new items until they subscribe again.`, { confirmLabel: "End Access" }))) return;
   try {
     await adminEndAccess(username);
     toastMsg(`Access ended for @${username}`);
@@ -553,7 +540,7 @@ async function renderUsersTab() {
 }
 
 window.handlePromote = async function (username) {
-  if (!confirm(`Give @${username} admin access?`)) return;
+  if (!(await confirmDialog(`Give @${username} admin access?`, { confirmLabel: "Make Admin", danger: false }))) return;
   try {
     await promoteUser(username);
     toastMsg(`@${username} is now an admin`);
@@ -564,7 +551,7 @@ window.handlePromote = async function (username) {
 };
 
 window.handleDemote = async function (username) {
-  if (!confirm(`Remove admin access from @${username}?`)) return;
+  if (!(await confirmDialog(`Remove admin access from @${username}?`, { confirmLabel: "Remove Admin" }))) return;
   try {
     await demoteUser(username);
     toastMsg(`Admin access removed from @${username}`);
@@ -575,7 +562,7 @@ window.handleDemote = async function (username) {
 };
 
 window.handleDeleteUser = async function (username) {
-  if (!confirm(`Permanently delete @${username}'s account? This can't be undone.`)) return;
+  if (!(await confirmDialog(`Permanently delete @${username}'s account? This can't be undone.`, { confirmLabel: "Delete Account" }))) return;
   try {
     await deleteUser(username);
     toastMsg(`@${username} deleted`);

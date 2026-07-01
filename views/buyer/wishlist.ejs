@@ -116,9 +116,10 @@ async function init() {
 
 window.handleRemove = async function (event, productId) {
   event.stopPropagation();
+  const card = event.currentTarget.closest(".wl-card");
   try {
     await removeFromWishlist(currentUserId, productId);
-    document.querySelector(`.wl-remove[onclick*="${productId}"]`).closest(".wl-card").remove();
+    card.remove();
     toastMsg("Removed from wishlist");
     if (!document.querySelectorAll(".wl-card").length) {
       document.getElementById("wl-grid").classList.add("hidden");

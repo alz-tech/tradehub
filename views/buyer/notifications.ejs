@@ -217,7 +217,7 @@ window.openNotifDetail = function (n, notifId, orderId) {
   const orderBtn = document.getElementById("nt-detail-order-btn");
   if (orderId) {
     orderBtn.classList.remove("hidden");
-    orderBtn.onclick = () => toastMsg("done");
+    orderBtn.onclick = () => window.location.href = "/orders";
   } else {
     orderBtn.classList.add("hidden");
   }
