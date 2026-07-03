@@ -48,7 +48,7 @@ app.use(attachUser);
 // ── API routes ──────────────────────────────────────────
 app.use("/api/auth", require("./routes/api/auth"));
 app.use("/api/products", require("./routes/api/products").router);
-app.use("/api/orders", require("./routes/api/orders"));
+app.use("/api/orders", require("./routes/api/orders").router);
 app.use("/api/wishlist", require("./routes/api/wishlist"));
 app.use("/api/notifications", require("./routes/api/notifications"));
 app.use("/api/subscriptions", require("./routes/api/subscriptions").router);

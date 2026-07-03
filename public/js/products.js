@@ -87,6 +87,12 @@ export async function getAllProductsForAdmin() {
   return data.products;
 }
 
+// ── Admin: every order platform-wide ──────────────────
+export async function getAllOrdersForAdmin() {
+  const data = await api("/admin/orders");
+  return data.orders;
+}
+
 export async function approveProduct(productId) {
   await api(`/admin/products/${productId}/approve`, { method: "POST" });
 }

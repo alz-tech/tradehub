@@ -5,6 +5,7 @@ const express = require("express");
 const pool = require("../../db/pool");
 const { requireAdmin } = require("../../middleware/auth");
 const { mapProduct } = require("./products");
+const { mapOrder } = require("./orders");
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -32,6 +33,12 @@ router.post("/products/:id/reject", async (req, res) => {
 router.delete("/products/:id", async (req, res) => {
   await pool.query("DELETE FROM products WHERE id = $1", [req.params.id]);
   res.json({ success: true });
+});
+
+// ── Every order platform-wide (not scoped to one buyer/seller) ──
+router.get("/orders", async (req, res) => {
+  const { rows } = await pool.query("SELECT * FROM orders ORDER BY created_at DESC");
+  res.json({ orders: rows.map(mapOrder) });
 });
 
 module.exports = router;

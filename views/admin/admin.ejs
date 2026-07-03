@@ -14,14 +14,56 @@
   .ad-badge { background: var(--blue); color: #fff; font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: var(--r-pill); }
 
   .ad-tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .ad-tab { flex: 1; text-align: center; padding: 13px; font-size: 12.5px; font-weight: 700; color: var(--text-faint); position: relative; }
+  .ad-tab {
+    flex: 1; text-align: center; padding: 10px 4px 11px; font-size: 11px; font-weight: 700;
+    color: var(--text-faint); position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .ad-tab svg { width: 18px; height: 18px; }
   .ad-tab.active { color: var(--blue); }
   .ad-tab.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px; background: var(--blue); }
   .ad-tab .count-dot {
+    position: absolute; top: 4px; left: 50%; margin-left: 5px;
     display: inline-flex; align-items: center; justify-content: center;
-    min-width: 16px; height: 16px; border-radius: 8px; background: var(--danger); color: #fff;
-    font-size: 9px; font-weight: 800; margin-left: 4px; padding: 0 4px;
+    min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: #fff;
+    font-size: 8.5px; font-weight: 800; padding: 0 3px;
   }
+
+  /* ── Sub-filter pills (used inside the Products tab for status) ── */
+  .ad-subfilter { display: flex; gap: 8px; padding: 2px 0 14px; overflow-x: auto; }
+  .ad-subfilter-pill {
+    flex-shrink: 0; padding: 7px 14px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700;
+    background: var(--field-bg); color: var(--text-dim); white-space: nowrap; display: flex; align-items: center; gap: 5px;
+  }
+  .ad-subfilter-pill.active { background: var(--blue); color: #fff; }
+  .ad-subfilter-pill .count-dot {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: #fff;
+    font-size: 8.5px; font-weight: 800; padding: 0 3px;
+  }
+  .ad-subfilter-pill.active .count-dot { background: rgba(255,255,255,.35); }
+
+  /* ── Site settings tab ── */
+  .settings-item { background: var(--surface); border-radius: var(--r-lg); padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(20,30,50,.05); }
+  .settings-item h3 { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 5px; display: flex; align-items: center; gap: 7px; }
+  .settings-item p { font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 12px; }
+
+  /* ── Orders tab ── */
+  .ord-card { background: var(--surface); border-radius: var(--r-lg); padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(20,30,50,.05); }
+  .ord-top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .ord-id { font-size: 12.5px; font-weight: 700; color: var(--text); }
+  .ord-date { font-size: 10.5px; color: var(--text-faint); margin-top: 2px; }
+  .ord-status { font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: var(--r-pill); text-transform: capitalize; }
+  .ord-status.pending { background: #FFF3E0; color: #C17A00; }
+  .ord-status.delivered { background: var(--success-bg); color: var(--success); }
+  .ord-status.cancelled { background: #FFE5EC; color: var(--danger); }
+  .ord-buyer-box { background: var(--field-bg); border-radius: var(--r-md); padding: 10px 12px; margin-bottom: 10px; font-size: 11.5px; color: var(--text-dim); }
+  .ord-buyer-box strong { color: var(--text); }
+  .ord-item-row { font-size: 12px; color: var(--text-dim); padding: 3px 0; }
+  .ord-item-row strong { color: var(--text); }
+  .ord-divider { height: 1px; background: var(--border); margin: 10px 0; }
+  .ord-total-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: var(--text); }
+  .ord-total-row span:last-child { color: var(--accent-end); }
+  .ord-sellers { font-size: 10.5px; color: var(--text-faint); margin-top: 4px; }
 
   .ad-body { flex: 1; padding: 14px 16px 20px; overflow-y: auto; }
 
@@ -117,12 +159,26 @@
     </div>
 
     <div class="ad-tabs">
-      <div class="ad-tab active" data-tab="pending" onclick="switchTab('pending')">Pending <span class="count-dot hidden" id="pending-count">0</span></div>
-      <div class="ad-tab" data-tab="approved" onclick="switchTab('approved')">Approved</div>
-      <div class="ad-tab" data-tab="rejected" onclick="switchTab('rejected')">Rejected</div>
-      <div class="ad-tab" data-tab="tools" onclick="switchTab('tools')">Tools</div>
-      <div class="ad-tab" data-tab="subs" onclick="switchTab('subs')">Subs</div>
-      <div class="ad-tab" data-tab="users" onclick="switchTab('users')">Users</div>
+      <div class="ad-tab active" data-tab="users" onclick="switchTab('users')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Users
+      </div>
+      <div class="ad-tab" data-tab="products" onclick="switchTab('products')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Products <span class="count-dot hidden" id="pending-count">0</span>
+      </div>
+      <div class="ad-tab" data-tab="subscription" onclick="switchTab('subscription')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Subscription
+      </div>
+      <div class="ad-tab" data-tab="settings" onclick="switchTab('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Site settings
+      </div>
+      <div class="ad-tab" data-tab="orders" onclick="switchTab('orders')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14l-8 4m0 10l-8-4V7m8 14V11M4 7l8 4"/></svg>
+        Orders
+      </div>
     </div>
 
     <div class="ad-body" id="ad-body">
@@ -148,7 +204,7 @@
 import { getSessionInfo, getAllSellers } from "/js/auth.js";
 import { confirmDialog } from "/js/ui.js";
 import {
-  getPendingProducts, getAllProductsForAdmin, approveProduct, rejectProduct, deleteProduct
+  getPendingProducts, getAllProductsForAdmin, approveProduct, rejectProduct, deleteProduct, getAllOrdersForAdmin
 } from "/js/products.js";
 
 import {
@@ -171,9 +227,10 @@ import {
 // admin rights; the real gate already happened before this file loaded.
 // ════════════════════════════════════════════════════
 
-let currentTab = "pending";
+let currentTab = "users";
+let productSubFilter = "pending"; // sub-filter inside the Products tab
 let rejectTargetId = null;
-let cachedAll = null; // all products, fetched once for approved/rejected tabs
+let cachedAll = null; // all products, fetched once for approved/rejected sub-filters
 
 function toastMsg(msg, dur = 2500) {
   const el = document.getElementById("toast");
@@ -196,7 +253,7 @@ async function init() {
 
   document.getElementById("loading").classList.add("hidden");
   document.getElementById("admin-view").classList.remove("hidden");
-  await loadTab("pending");
+  await loadTab("users");
 }
 
 window.switchTab = async function (tab) {
@@ -210,11 +267,11 @@ async function loadTab(tab) {
   body.innerHTML = '<div class="spinner-wrap" style="padding:40px 0;"><div class="spinner"></div></div>';
 
   try {
-    if (tab === "tools") {
-      renderToolsTab();
+    if (tab === "settings") {
+      renderSettingsTab();
       return;
     }
-    if (tab === "subs") {
+    if (tab === "subscription") {
       await renderSubsTab();
       return;
     }
@@ -222,33 +279,75 @@ async function loadTab(tab) {
       await renderUsersTab();
       return;
     }
-
-    let products;
-    if (tab === "pending") {
-      products = await getPendingProducts();
-      const countEl = document.getElementById("pending-count");
-      if (products.length > 0) {
-        countEl.textContent = products.length;
-        countEl.classList.remove("hidden");
-      } else {
-        countEl.classList.add("hidden");
-      }
-    } else {
-      if (!cachedAll) cachedAll = await getAllProductsForAdmin();
-      products = cachedAll.filter(p => p.status === tab);
-    }
-
-    if (!products.length) {
-      body.innerHTML = `
-        <div class="empty-state">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-          <p>No ${tab} listings right now.</p>
-        </div>
-      `;
+    if (tab === "orders") {
+      await renderOrdersTab();
       return;
     }
+    if (tab === "products") {
+      await renderProductsTab();
+      return;
+    }
+  } catch (e) {
+    console.error(e);
+    body.innerHTML = `<div class="empty-state"><p>Something went wrong.<br/><span style="font-size:11px;color:var(--text-faint);word-break:break-word;">${escHtml(e.message)}</span></p></div>`;
+  }
+}
 
-    body.innerHTML = products.map(p => `
+// ── Products tab: Pending/Approved/Rejected moderation ─
+// Same three states as before, now nested as a sub-filter inside one
+// top-level "Products" tab instead of three separate top-level tabs.
+window.setProductFilter = async function (status) {
+  productSubFilter = status;
+  await renderProductsTab();
+};
+
+async function renderProductsTab() {
+  const body = document.getElementById("ad-body");
+  try {
+  let products;
+  let pendingCountForBadge = null;
+  if (productSubFilter === "pending") {
+    products = await getPendingProducts();
+    pendingCountForBadge = products.length;
+  } else {
+    if (!cachedAll) cachedAll = await getAllProductsForAdmin();
+    products = cachedAll.filter(p => p.status === productSubFilter);
+    // Still need the pending count for the sub-filter pill's badge even
+    // when viewing a different sub-filter, and for the top-level tab dot.
+    if (cachedAll) pendingCountForBadge = cachedAll.filter(p => p.status === "pending").length;
+  }
+
+  // Keep the top-level Products tab's badge in sync no matter which
+  // sub-filter is currently open.
+  const tabCountEl = document.getElementById("pending-count");
+  if (pendingCountForBadge !== null && pendingCountForBadge > 0) {
+    tabCountEl.textContent = pendingCountForBadge;
+    tabCountEl.classList.remove("hidden");
+  } else {
+    tabCountEl.classList.add("hidden");
+  }
+
+  const subfilterHtml = `
+    <div class="ad-subfilter">
+      <div class="ad-subfilter-pill ${productSubFilter === 'pending' ? 'active' : ''}" onclick="setProductFilter('pending')">
+        Pending ${pendingCountForBadge ? `<span class="count-dot">${pendingCountForBadge}</span>` : ''}
+      </div>
+      <div class="ad-subfilter-pill ${productSubFilter === 'approved' ? 'active' : ''}" onclick="setProductFilter('approved')">Approved</div>
+      <div class="ad-subfilter-pill ${productSubFilter === 'rejected' ? 'active' : ''}" onclick="setProductFilter('rejected')">Rejected</div>
+    </div>
+  `;
+
+  if (!products.length) {
+    body.innerHTML = subfilterHtml + `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <p>No ${productSubFilter} listings right now.</p>
+      </div>
+    `;
+    return;
+  }
+
+  body.innerHTML = subfilterHtml + products.map(p => `
       <div class="ad-card">
         <div class="ad-card-top">
           <div class="ad-thumb">${p.imageUrl ? `<img src="${p.imageUrl}"/>` : ""}</div>
@@ -334,16 +433,74 @@ window.confirmReject = async function () {
   }
 };
 
-// ── Tools tab: cleanup utilities ──────────────────────
-function renderToolsTab() {
+// ── Orders tab: every order platform-wide ──────────────
+// Unlike /sales (seller-scoped, one seller's slice of each order) or
+// /orders (buyer-scoped, one buyer's own history), this shows every
+// order across Tradehub, exactly as placed — including items from
+// multiple sellers in one order where that applies.
+function formatOrderDate(ts) {
+  if (!ts) return "";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+async function renderOrdersTab() {
+  const body = document.getElementById("ad-body");
+  try {
+    const orders = await getAllOrdersForAdmin();
+
+    if (!orders.length) {
+      body.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14l-8 4m0 10l-8-4V7m8 14V11M4 7l8 4"/></svg>
+          <p>No orders placed yet.</p>
+        </div>
+      `;
+      return;
+    }
+
+    body.innerHTML = orders.map(order => `
+      <div class="ord-card">
+        <div class="ord-top-row">
+          <div>
+            <div class="ord-id">Order #${String(order.id).padStart(6, "0")}</div>
+            <div class="ord-date">${formatOrderDate(order.createdAt)}</div>
+          </div>
+          <span class="ord-status ${order.status || 'pending'}">${order.status || 'pending'}</span>
+        </div>
+
+        <div class="ord-buyer-box">
+          <strong>${escHtml(order.buyerName)}</strong> · ${escHtml(order.buyerPhone || "—")}<br/>
+          ${escHtml(order.deliveryAddress || "No address given")}
+          ${order.remark ? `<br/><em>"${escHtml(order.remark)}"</em>` : ''}
+        </div>
+
+        ${(order.items || []).map(item => `
+          <div class="ord-item-row"><strong>${escHtml(item.name)}</strong>&nbsp;×${item.qty} — ${formatNaira(item.price * item.qty)}</div>
+        `).join("")}
+
+        <div class="ord-sellers">Seller${(order.sellerIds || []).length !== 1 ? 's' : ''}: ${(order.sellerIds || []).map(s => "@" + escHtml(s)).join(", ") || "—"}</div>
+
+        <div class="ord-divider"></div>
+        <div class="ord-total-row"><span>Total (incl. ${formatNaira(order.deliveryFee)} delivery)</span><span>${formatNaira(order.total)}</span></div>
+      </div>
+    `).join("");
+  } catch (e) {
+    console.error(e);
+    body.innerHTML = `<div class="empty-state"><p>Couldn't load orders.<br/><span style="font-size:11px;color:var(--text-faint);word-break:break-word;">${escHtml(e.message)}</span></p></div>`;
+  }
+}
+
+// ── Site settings tab ──────────────────────────────────
+function renderSettingsTab() {
   const body = document.getElementById("ad-body");
   body.innerHTML = `
-    <div class="ad-cleanup-card">
-      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Remove old demo/seed products</h3>
+    <div class="settings-item">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Remove old demo/seed products</h3>
       <p>Earlier builds of Tradehub included sample listings from a test seller ("Cfirbigets"). If any of those are still in your database, this will find and delete them permanently.</p>
       <button class="ad-cleanup-btn" onclick="handleCleanupDemo()">Find &amp; Remove Demo Products</button>
+      <div id="cleanup-results" style="margin-top:12px;"></div>
     </div>
-    <div id="cleanup-results"></div>
   `;
 }
 
@@ -381,7 +538,7 @@ window.confirmDeleteDemo = async function () {
     await Promise.all(window.__demoProductIds.map(id => deleteProduct(id)));
     toastMsg(`Deleted ${window.__demoProductIds.length} demo product(s)`);
     cachedAll = null;
-    renderToolsTab();
+    renderSettingsTab();
   } catch (e) {
     toastMsg("Couldn't delete: " + e.message);
   }

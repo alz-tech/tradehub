@@ -160,4 +160,4 @@ router.post("/:id/receive", requireAuth, async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = { router, mapOrder };
