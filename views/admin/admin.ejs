@@ -65,6 +65,13 @@
   .ord-total-row span:last-child { color: var(--accent-end); }
   .ord-sellers { font-size: 10.5px; color: var(--text-faint); margin-top: 4px; }
 
+  /* ── Manage-access modal ── */
+  .perm-row { display: flex; align-items: center; gap: 10px; padding: 11px 4px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--text); }
+  .perm-row:last-child { border-bottom: none; }
+  .perm-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); flex-shrink: 0; }
+  .perm-row-icon { width: 17px; height: 17px; color: var(--text-dim); flex-shrink: 0; display: flex; }
+  .perm-row-icon svg { width: 100%; height: 100%; }
+
   .ad-body { flex: 1; padding: 14px 16px 20px; overflow-y: auto; }
 
   .ad-card { background: var(--surface); border-radius: var(--r-lg); padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(20,30,50,.06); }
@@ -130,6 +137,7 @@
   .usr-badges { display: flex; gap: 6px; flex-shrink: 0; }
   .usr-pill { font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: var(--r-pill); text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
   .usr-pill.admin { background: var(--accent-bg-soft); color: var(--accent-end); }
+  .usr-pill.owner { background: #FFF3E0; color: #C17A00; display: inline-flex; align-items: center; gap: 3px; }
   .usr-pill.invincible { background: #FFF3E0; color: #C17A00; display: inline-flex; align-items: center; gap: 3px; }
   .usr-detail { font-size: 11.5px; color: var(--text-dim); margin-bottom: 10px; }
   .usr-actions { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -198,21 +206,34 @@
   </div>
 </div>
 
+<div id="perm-modal-overlay" class="hidden modal-overlay" onclick="if(event.target===this) closePermissionsModal()">
+  <div class="modal-box">
+    <h3 id="perm-modal-title">Manage access</h3>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Choose which sections of the admin panel this account can see and use.</p>
+    <div id="perm-modal-list"></div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="modal-btn cancel" onclick="closePermissionsModal()">Cancel</button>
+      <button class="modal-btn confirm-safe" onclick="savePermissions()">Save Access</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
 import { getSessionInfo, getAllSellers } from "/js/auth.js";
 import { confirmDialog } from "/js/ui.js";
 import {
-  getPendingProducts, getAllProductsForAdmin, approveProduct, rejectProduct, deleteProduct, getAllOrdersForAdmin
+  getPendingProducts, getAllProductsForAdmin, approveProduct, rejectProduct, deleteProduct, getAllOrdersForAdmin,
+  findDemoProducts, cleanupDemoProducts
 } from "/js/products.js";
 
 import {
-  adminStartTrial, adminGrantPaidDays, adminEndAccess
+  adminStartTrial, adminGrantPaidDays, adminEndAccess, adminGrantLifetime
 } from "/js/subscriptions.js";
 
 import {
-  getAllUsers, promoteUser, demoteUser, deleteUser
+  getAllUsers, promoteUser, demoteUser, deleteUser, setAdminPermissions
 } from "/js/users.js";
 
 // ════════════════════════════════════════════════════
@@ -241,6 +262,9 @@ function toastMsg(msg, dur = 2500) {
 function formatNaira(n) { return "₦" + Number(n).toLocaleString("en-NG"); }
 function escHtml(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
+const TAB_ORDER = ["users", "products", "subscription", "settings", "orders"];
+let myTabs = [];
+
 async function init() {
   const { user, isAdmin } = await getSessionInfo();
   if (!user || !isAdmin) {
@@ -250,13 +274,37 @@ async function init() {
     return;
   }
   currentUsername = user.username;
+  currentIsOwner = !!user.isOwner;
+  myTabs = currentIsOwner ? TAB_ORDER : TAB_ORDER.filter(t => (user.adminTabs || []).includes(t));
+
+  // Hide tab-bar entries this admin doesn't have access to.
+  document.querySelectorAll(".ad-tab").forEach(t => {
+    if (!myTabs.includes(t.dataset.tab)) t.classList.add("hidden");
+  });
 
   document.getElementById("loading").classList.add("hidden");
   document.getElementById("admin-view").classList.remove("hidden");
-  await loadTab("users");
+
+  if (!myTabs.length) {
+    renderNoAccessState();
+    return;
+  }
+  document.querySelectorAll(".ad-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === myTabs[0]));
+  await loadTab(myTabs[0]);
+}
+
+function renderNoAccessState() {
+  document.querySelector(".ad-tabs").classList.add("hidden");
+  document.getElementById("ad-body").innerHTML = `
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p>You're an admin, but the owner hasn't granted you access to any sections yet. Ask them to grant you access.</p>
+    </div>
+  `;
 }
 
 window.switchTab = async function (tab) {
+  if (!myTabs.includes(tab)) return;
   currentTab = tab;
   document.querySelectorAll(".ad-tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
   await loadTab(tab);
@@ -509,8 +557,7 @@ window.handleCleanupDemo = async function () {
   resultsEl.innerHTML = '<div class="spinner-wrap" style="padding:20px 0;"><div class="spinner"></div></div>';
 
   try {
-    const all = await getAllProductsForAdmin();
-    const found = all.filter(p => p.sellerName === "Cfirbigets");
+    const found = await findDemoProducts();
 
     if (!found.length) {
       resultsEl.innerHTML = `<div class="empty-state"><p>No demo products found. Your catalog is clean.</p></div>`;
@@ -523,21 +570,20 @@ window.handleCleanupDemo = async function () {
         <ul style="font-size:12px;color:var(--text-dim);margin-bottom:14px;padding-left:18px;">
           ${found.map(p => `<li>${escHtml(p.name)}</li>`).join("")}
         </ul>
-        <button class="ad-btn reject" style="width:100%;" onclick="confirmDeleteDemo()">Delete All ${found.length} Permanently</button>
+        <button class="ad-btn reject" style="width:100%;" onclick="confirmDeleteDemo(${found.length})">Delete All ${found.length} Permanently</button>
       </div>
     `;
-    window.__demoProductIds = found.map(p => p.id);
   } catch (e) {
     resultsEl.innerHTML = `<div class="empty-state"><p>Couldn't search for demo products.<br/><span style="font-size:11px;color:var(--text-faint);">${escHtml(e.message)}</span></p></div>`;
   }
 };
 
-window.confirmDeleteDemo = async function () {
-  if (!(await confirmDialog(`Permanently delete ${window.__demoProductIds.length} demo product(s)? This can't be undone.`, { confirmLabel: "Delete" }))) return;
+window.confirmDeleteDemo = async function (count) {
+  if (!(await confirmDialog(`Permanently delete ${count} demo product(s)? This can't be undone.`, { confirmLabel: "Delete" }))) return;
   try {
-    await Promise.all(window.__demoProductIds.map(id => deleteProduct(id)));
-    toastMsg(`Deleted ${window.__demoProductIds.length} demo product(s)`);
-    cachedAll = null;
+    const deleted = await cleanupDemoProducts();
+    toastMsg(`Deleted ${deleted} demo product(s)`);
+    cachedAll = null; // in case the Products tab has a stale cache from before cleanup
     renderSettingsTab();
   } catch (e) {
     toastMsg("Couldn't delete: " + e.message);
@@ -643,15 +689,21 @@ window.handleEndAccess = async function (username) {
 // gate. currentUsername lets the acting admin see, but not act on,
 // their own row where that would be confusing (e.g. deleting yourself).
 let currentUsername = null;
+let currentIsOwner = false;
+let usersByUsername = {};
 
 function invincibleBadgeSvg() {
   return `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5l-9-4z"/></svg>`;
+}
+function ownerBadgeSvg() {
+  return `<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M2 18h20l-1.5-9-5 4-3.5-7-3.5 7-5-4L2 18z"/></svg>`;
 }
 
 async function renderUsersTab() {
   const body = document.getElementById("ad-body");
   try {
     const users = await getAllUsers();
+    usersByUsername = Object.fromEntries(users.map(u => [u.username, u]));
     if (!users.length) {
       body.innerHTML = `<div class="empty-state"><p>No accounts yet.</p></div>`;
       return;
@@ -660,22 +712,32 @@ async function renderUsersTab() {
     body.innerHTML = users.map(u => {
       const isSelf = u.username === currentUsername;
       const badges = [
-        u.isAdmin ? `<span class="usr-pill admin">Admin</span>` : "",
+        u.isOwner ? `<span class="usr-pill owner">${ownerBadgeSvg()} Owner</span>` : (u.isAdmin ? `<span class="usr-pill admin">Admin</span>` : ""),
         u.isProtected ? `<span class="usr-pill invincible">${invincibleBadgeSvg()} Invincible</span>` : ""
       ].join("");
 
       let actions;
-      if (u.isProtected) {
-        actions = `<span style="font-size:11px;color:var(--text-faint);">Protected — can't be changed here</span>`;
+      if (u.isOwner) {
+        actions = `<span style="font-size:11px;color:var(--text-faint);">${isSelf ? "This is your account" : "Site owner — manages every admin's access"}</span>`;
       } else if (isSelf) {
         actions = `<span style="font-size:11px;color:var(--text-faint);">This is your account</span>`;
+      } else if (u.isProtected) {
+        actions = `<span style="font-size:11px;color:var(--text-faint);">Protected — can't be changed here</span>`;
+      } else if (!currentIsOwner) {
+        // Non-owner admins can see who's an admin, but only the owner
+        // can promote, demote, or edit permissions — matches the
+        // server-side requireOwner gate on these actions exactly.
+        actions = u.isAdmin
+          ? `<span style="font-size:11px;color:var(--text-faint);">Only the owner can manage admin access</span>`
+          : `<button class="usr-btn danger" onclick="handleDeleteUser('${u.username}')">Delete Account</button>`;
       } else {
         actions = `
           ${u.isAdmin
-            ? `<button class="usr-btn" onclick="handleDemote('${u.username}')">Remove Admin</button>`
-            : `<button class="usr-btn primary" onclick="handlePromote('${u.username}')">Make Admin</button>`
+            ? `<button class="usr-btn" onclick="openPermissionsModal('${u.username}')">Manage Access</button>
+               <button class="usr-btn danger" onclick="handleDemote('${u.username}')">Remove Admin</button>`
+            : `<button class="usr-btn primary" onclick="handlePromote('${u.username}')">Make Admin</button>
+               <button class="usr-btn danger" onclick="handleDeleteUser('${u.username}')">Delete Account</button>`
           }
-          <button class="usr-btn danger" onclick="handleDeleteUser('${u.username}')">Delete Account</button>
         `;
       }
 
@@ -700,8 +762,12 @@ window.handlePromote = async function (username) {
   if (!(await confirmDialog(`Give @${username} admin access?`, { confirmLabel: "Make Admin", danger: false }))) return;
   try {
     await promoteUser(username);
-    toastMsg(`@${username} is now an admin`);
+    toastMsg(`@${username} is now an admin — choose what they can access`);
     await renderUsersTab();
+    // Freshly-promoted admins start with zero tabs granted — open the
+    // permissions editor right away instead of leaving them invisible
+    // and locked out until the owner remembers to come back for it.
+    openPermissionsModal(username);
   } catch (e) {
     toastMsg("Couldn't promote: " + e.message);
   }
@@ -726,6 +792,50 @@ window.handleDeleteUser = async function (username) {
     await renderUsersTab();
   } catch (e) {
     toastMsg("Couldn't delete: " + e.message);
+  }
+};
+
+// ── Owner: manage-access modal ─────────────────────────
+// Which of the 5 admin tabs a given admin can see and act on. Reuses
+// the same icons as the tab bar itself so a checkbox row and its
+// corresponding tab are visually the same thing at a glance.
+const TAB_META = {
+  users:        { label: "Users",        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>` },
+  products:     { label: "Products",     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>` },
+  subscription: { label: "Subscription", icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>` },
+  settings:     { label: "Site settings",icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>` },
+  orders:       { label: "Orders",       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7L12 3 4 7m16 0v10l-8 4m8-14l-8 4m0 10l-8-4V7m8 14V11M4 7l8 4"/></svg>` }
+};
+let permTargetUsername = null;
+
+window.openPermissionsModal = function (username) {
+  permTargetUsername = username;
+  const currentTabs = (usersByUsername[username] && usersByUsername[username].adminTabs) || [];
+  document.getElementById("perm-modal-title").textContent = `@${username}'s access`;
+  document.getElementById("perm-modal-list").innerHTML = TAB_ORDER.map(tab => `
+    <label class="perm-row">
+      <input type="checkbox" value="${tab}" ${currentTabs.includes(tab) ? "checked" : ""}/>
+      <span class="perm-row-icon">${TAB_META[tab].icon}</span>
+      <span>${TAB_META[tab].label}</span>
+    </label>
+  `).join("");
+  document.getElementById("perm-modal-overlay").classList.remove("hidden");
+};
+
+window.closePermissionsModal = function () {
+  document.getElementById("perm-modal-overlay").classList.add("hidden");
+  permTargetUsername = null;
+};
+
+window.savePermissions = async function () {
+  const checked = Array.from(document.querySelectorAll("#perm-modal-list input:checked")).map(el => el.value);
+  try {
+    await setAdminPermissions(permTargetUsername, checked);
+    toastMsg(`Updated @${permTargetUsername}'s access`);
+    closePermissionsModal();
+    await renderUsersTab();
+  } catch (e) {
+    toastMsg("Couldn't save: " + e.message);
   }
 };
 

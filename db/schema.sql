@@ -20,6 +20,22 @@ CREATE TABLE IF NOT EXISTS users (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- is_owner: the one account that manages every other admin's access —
+-- can promote/demote admins and edit their admin_tabs. Regular admins
+-- (is_admin = TRUE, is_owner = FALSE) can only see/act on the tabs
+-- listed in admin_tabs. New admins start with admin_tabs = '{}' (no
+-- access to anything) until the owner explicitly grants tabs — see
+-- routes/api/users.js. Valid tab values: 'users','products',
+-- 'subscription','settings','orders'.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_owner    BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_tabs  TEXT[]  NOT NULL DEFAULT '{}';
+
+-- Backfill: any admin that existed before this migration keeps full
+-- access to every tab, so this change can't silently lock out an
+-- admin who already had the run of the panel.
+UPDATE users SET admin_tabs = ARRAY['users','products','subscription','settings','orders']
+WHERE is_admin = TRUE AND admin_tabs = '{}';
+
 CREATE TABLE IF NOT EXISTS subscriptions (
   username            TEXT PRIMARY KEY REFERENCES users(username) ON DELETE CASCADE,
   status              TEXT NOT NULL DEFAULT 'trial' CHECK (status IN ('trial', 'active', 'expired')),
@@ -30,6 +46,11 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- is_lifetime: permanent paid access that never expires, so it doesn't
+-- need (and ignores) current_period_end. Only ever set by an owner —
+-- see routes/api/subscriptions.js and getAccessState().
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS is_lifetime BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS products (
   id                SERIAL PRIMARY KEY,

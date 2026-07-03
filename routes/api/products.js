@@ -4,6 +4,7 @@
 const express = require("express");
 const pool = require("../../db/pool");
 const { requireAuth, requireRole } = require("../../middleware/auth");
+const { getAccessState } = require("./subscriptions");
 
 const router = express.Router();
 
@@ -82,6 +83,22 @@ router.get("/:id", async (req, res) => {
 // ── Create listing — starts "pending" until admin approves ──
 router.post("/", requireRole("seller"), async (req, res) => {
   try {
+    // Admins bypass this (same convention requireRole already uses:
+    // admin implies full buyer+seller access). Everyone else needs an
+    // active trial, paid, or lifetime subscription — the client
+    // already gates /sell on this (see sell.ejs's subscription-gate),
+    // this is the real enforcement behind it.
+    if (!req.isAdmin) {
+      const { rows } = await pool.query("SELECT * FROM subscriptions WHERE username = $1", [req.user.username]);
+      const state = getAccessState(rows[0] ? {
+        status: rows[0].status, trialEnd: Number(rows[0].trial_end) || null,
+        currentPeriodEnd: Number(rows[0].current_period_end) || null, isLifetime: !!rows[0].is_lifetime
+      } : null);
+      if (state !== "trial" && state !== "active") {
+        return res.status(403).json({ success: false, error: "Your seller subscription isn't active. Subscribe to list items on Tradehub." });
+      }
+    }
+
     const { name, description, category, price, oldPrice, images, sellerLocation } = req.body || {};
     if (!name || !category || !price) {
       return res.status(400).json({ success: false, error: "Name, category, and price are required." });

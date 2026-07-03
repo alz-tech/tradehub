@@ -31,6 +31,7 @@ export async function getSubscription() {
 
 export function getAccessState(sub) {
   if (!sub) return "none";
+  if (sub.isLifetime) return "active"; // never expires — skip the date check entirely
   const now = Date.now();
   if (sub.status === "trial") return sub.trialEnd && now < sub.trialEnd ? "trial" : "expired";
   if (sub.status === "active") return sub.currentPeriodEnd && now < sub.currentPeriodEnd ? "active" : "expired";
@@ -58,4 +59,9 @@ export async function adminGrantPaidDays(username, days = 30) {
 
 export async function adminEndAccess(username) {
   await api(`/subscriptions/admin/${username}/end`, { method: "POST" });
+}
+
+// ── Owner-only: permanent, non-expiring access ────────
+export async function adminGrantLifetime(username) {
+  await api(`/subscriptions/admin/${username}/lifetime`, { method: "POST" });
 }

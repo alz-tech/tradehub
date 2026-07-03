@@ -28,3 +28,8 @@ export async function demoteUser(username) {
 export async function deleteUser(username) {
   await api(`/users/${username}`, { method: "DELETE" });
 }
+
+// ── Owner-only: set which admin tabs a given admin can access ──
+export async function setAdminPermissions(username, adminTabs) {
+  await api(`/users/${username}/permissions`, { method: "PATCH", body: JSON.stringify({ adminTabs }) });
+}

@@ -93,6 +93,17 @@ export async function getAllOrdersForAdmin() {
   return data.orders;
 }
 
+// ── Admin: site settings — demo/seed data cleanup ─────
+export async function findDemoProducts() {
+  const data = await api("/admin/settings/demo-products");
+  return data.products;
+}
+
+export async function cleanupDemoProducts() {
+  const data = await api("/admin/settings/demo-products/cleanup", { method: "POST" });
+  return data.deleted;
+}
+
 export async function approveProduct(productId) {
   await api(`/admin/products/${productId}/approve`, { method: "POST" });
 }

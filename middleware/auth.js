@@ -30,6 +30,8 @@ function mapUser(row) {
     totalSales: row.total_sales,
     isAdmin: !!row.is_admin,
     isProtected: !!row.is_protected,
+    isOwner: !!row.is_owner,
+    adminTabs: row.admin_tabs || [],
     createdAt: row.created_at
   };
 }
@@ -46,7 +48,7 @@ async function attachUser(req, res, next) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT username, name, phone, role, avatar_color, avatar_url, rating, total_sales, is_admin, is_protected, created_at
+      `SELECT username, name, phone, role, avatar_color, avatar_url, rating, total_sales, is_admin, is_protected, is_owner, admin_tabs, created_at
        FROM users WHERE username = $1`,
       [username]
     );
@@ -56,7 +58,13 @@ async function attachUser(req, res, next) {
     }
 
     const user = mapUser(rows[0]);
-    const isAdmin = ADMIN_USERNAMES.includes(username) || user.isAdmin;
+    const isEnvAdmin = ADMIN_USERNAMES.includes(username);
+    const isAdmin = isEnvAdmin || user.isAdmin;
+    // Env-allowlisted admins (ADMIN_USERNAMES) have no DB-backed
+    // admin_tabs to scope them by, so they get full access — same
+    // treatment as an owner — rather than being silently locked out
+    // of every tab.
+    if (isEnvAdmin) user.isOwner = true;
 
     req.user = user;
     req.isAdmin = isAdmin;
@@ -109,4 +117,33 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { attachUser, requireAuth, requireRole, requireAdmin, ADMIN_USERNAMES, mapUser };
+// Gates the admin-management actions themselves — promoting/demoting
+// an admin, or editing an admin's tab permissions. Only the owner (or
+// an env-allowlisted admin, who's treated as owner — see attachUser)
+// can do this; a regular admin can't grant themselves or anyone else
+// more access than the owner has already given them, no matter what
+// tabs they hold.
+function requireOwner(req, res, next) {
+  if (!req.user || !req.isAdmin || !req.user.isOwner) {
+    return res.status(403).json({ success: false, error: "Only the site owner can manage admin access." });
+  }
+  next();
+}
+
+// Gates one specific admin tab (products/users/subscription/settings/
+// orders). Must run after requireAdmin. The owner always passes,
+// regardless of admin_tabs — tab restrictions only apply to the
+// admins the owner has scoped down.
+function requireAdminTab(tab) {
+  return (req, res, next) => {
+    if (!req.user || !req.isAdmin) {
+      return res.status(403).json({ success: false, error: "Admin access only." });
+    }
+    if (req.user.isOwner || req.user.adminTabs.includes(tab)) {
+      return next();
+    }
+    return res.status(403).json({ success: false, error: "You don't have access to this section. Ask the site owner to grant it." });
+  };
+}
+
+module.exports = { attachUser, requireAuth, requireRole, requireAdmin, requireOwner, requireAdminTab, ADMIN_USERNAMES, mapUser };

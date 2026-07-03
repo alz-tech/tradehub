@@ -139,6 +139,15 @@ async function refreshStatus() {
 
   pill.classList.remove("hidden", "trial", "active", "expired");
 
+  if (sub?.isLifetime) {
+    pill.classList.add("active");
+    pill.textContent = "Permanent access — never expires";
+    note.textContent = "Your seller access on Tradehub is permanent and doesn't require payment.";
+    payBtn.style.display = "none";
+    return;
+  }
+  payBtn.style.display = "flex";
+
   if (state === "trial") {
     pill.classList.add("trial");
     pill.textContent = `Free trial active — ends ${formatDate(sub.trialEnd)}`;
