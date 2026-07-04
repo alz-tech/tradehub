@@ -9,7 +9,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const pool = require("../../db/pool");
 const { ADMIN_USERNAMES, mapUser } = require("../../middleware/auth");
-const { DESIGNATED_ADMINS } = require("../../db/seed-admins");
+const { DESIGNATED_ADMINS, ALL_ADMIN_TABS, grantLifetimeSubscription } = require("../../db/seed-admins");
 
 // Looks up a username against the designated-admins list (db/seed-admins.js)
 // so a fresh signup is granted admin (and protected, if flagged)
@@ -54,10 +54,12 @@ router.post("/signup", async (req, res) => {
     const designated = designatedAdmin(username);
     const isAdmin = ADMIN_USERNAMES.includes(username) || !!designated;
     const isProtected = !!designated?.protected;
+    const isOwner = !!designated?.owner;
+    const adminTabs = isOwner ? ALL_ADMIN_TABS : (designated?.adminTabs || []);
     const { rows } = await client.query(
-      `INSERT INTO users (username, password_hash, name, phone, role, avatar_color, is_admin, is_protected)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [username, passwordHash, name || username, phone || null, role, avatarColor || "#3DA9FC", isAdmin, isProtected]
+      `INSERT INTO users (username, password_hash, name, phone, role, avatar_color, is_admin, is_protected, is_owner, admin_tabs)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [username, passwordHash, name || username, phone || null, role, avatarColor || "#3DA9FC", isAdmin, isProtected, isOwner, adminTabs]
     );
 
     // Sellers (and "both") get an automatic 14-day free trial, same as before.
@@ -68,6 +70,10 @@ router.post("/signup", async (req, res) => {
          VALUES ($1, 'trial', $2, $3)`,
         [username, now, now + 14 * 24 * 60 * 60 * 1000]
       );
+    }
+
+    if (designated?.lifetime) {
+      await grantLifetimeSubscription(client, username);
     }
 
     await client.query("COMMIT");

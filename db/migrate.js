@@ -23,7 +23,7 @@ module.exports = { runMigration };
 
 // ── CLI usage: `npm run migrate` ──────────────────────
 if (require.main === module) {
-  require("dotenv").config();
+  try { require("dotenv").config(); } catch { /* not installed — fine if DATABASE_URL is already set in the environment */ }
   const pool = require("./pool");
   (async () => {
     console.log("Running schema.sql against the database...");

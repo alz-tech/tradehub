@@ -33,3 +33,13 @@ export async function deleteUser(username) {
 export async function setAdminPermissions(username, adminTabs) {
   await api(`/users/${username}/permissions`, { method: "PATCH", body: JSON.stringify({ adminTabs }) });
 }
+
+// ── Any admin with the "users" tab ────────────────────
+export async function updateUserRole(username, role) {
+  await api(`/users/${username}/role`, { method: "PATCH", body: JSON.stringify({ role }) });
+}
+
+export async function getUserProducts(username) {
+  const data = await api(`/users/${username}/products`);
+  return data.products;
+}

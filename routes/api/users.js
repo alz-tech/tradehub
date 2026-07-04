@@ -16,6 +16,7 @@
 const express = require("express");
 const pool = require("../../db/pool");
 const { requireAdmin, requireOwner, requireAdminTab, mapUser } = require("../../middleware/auth");
+const { mapProduct } = require("./products");
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -67,6 +68,36 @@ router.patch("/:username/permissions", requireOwner, async (req, res) => {
   if (rows[0].is_owner) return res.status(400).json({ success: false, error: "The owner already has full access." });
   await pool.query("UPDATE users SET admin_tabs = $1 WHERE username = $2", [tabs, req.params.username]);
   res.json({ success: true, adminTabs: tabs });
+});
+
+// ── Any admin with the "users" tab: change a user's marketplace role
+// (buyer/seller/both). Deliberately NOT owner-gated — this doesn't
+// touch admin standing, just which parts of the marketplace someone
+// can use. is_protected still blocks it entirely (covers the owner
+// automatically, same as every other action in this file). ──
+router.patch("/:username/role", requireAdminTab("users"), async (req, res) => {
+  const { role } = req.body || {};
+  if (!["buyer", "seller", "both"].includes(role)) {
+    return res.status(400).json({ success: false, error: "Invalid role." });
+  }
+  if (req.params.username === req.user.username) {
+    return res.status(400).json({ success: false, error: "Use Edit Profile to change your own role." });
+  }
+  const { rows } = await pool.query("SELECT is_protected FROM users WHERE username = $1", [req.params.username]);
+  if (!rows.length) return res.status(404).json({ success: false, error: "User not found." });
+  if (rows[0].is_protected) {
+    return res.status(403).json({ success: false, error: "This account is protected and can't be changed." });
+  }
+  await pool.query("UPDATE users SET role = $1 WHERE username = $2", [role, req.params.username]);
+  res.json({ success: true });
+});
+
+// ── Any admin with the "users" tab: a user's full product list, for
+// the "view details" panel. Every status (pending/approved/rejected)
+// since this is an internal lookup, not the public buyer-facing feed. ──
+router.get("/:username/products", requireAdminTab("users"), async (req, res) => {
+  const { rows } = await pool.query("SELECT * FROM products WHERE seller_id = $1 ORDER BY created_at DESC", [req.params.username]);
+  res.json({ products: rows.map(mapProduct) });
 });
 
 router.delete("/:username", requireAdminTab("users"), async (req, res) => {

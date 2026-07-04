@@ -18,7 +18,12 @@
 // ON CONFLICT), so running it twice on the same username just
 // confirms the account is still set up correctly.
 // ════════════════════════════════════════════════════
-require("dotenv").config();
+// dotenv is optional here — it only matters if you're loading a local
+// .env file. If you're passing DATABASE_URL directly on the command
+// line (as in the usage example below), this does nothing and that's
+// fine; it just means node_modules doesn't need dotenv installed for
+// this to work.
+try { require("dotenv").config(); } catch { /* not installed — fine, see above */ }
 const pool = require("./pool");
 
 async function setupOwner(username) {
